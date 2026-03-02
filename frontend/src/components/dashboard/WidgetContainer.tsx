@@ -33,13 +33,13 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-slate-200 h-full flex flex-col overflow-hidden">
-      <div className="widget-drag-handle flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200 cursor-move">
-        <h3 className="font-medium text-slate-700 text-sm truncate">{widget.title}</h3>
+    <div className="bg-slate-800 border-r border-b border-slate-700 h-full flex flex-col overflow-hidden">
+      <div className="widget-drag-handle flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 cursor-move">
+        <h3 className="font-medium text-slate-200 text-sm truncate">{widget.title}</h3>
         <div className="flex items-center gap-1">
           <button
             onClick={() => editWidget(widget.id)}
-            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
             title="Configure"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -48,7 +48,7 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
           </button>
           <button
             onClick={handleDelete}
-            className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+            className="p-1 text-slate-500 hover:text-red-400 transition-colors"
             title="Delete"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -57,7 +57,7 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto p-2">
         {renderWidget()}
       </div>
     </div>

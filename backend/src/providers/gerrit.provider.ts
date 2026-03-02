@@ -2,6 +2,8 @@ import { BaseProvider, ProviderConfig } from './base.provider.js';
 import type { GerritChange } from '@dashboard/shared';
 
 export class GerritProvider extends BaseProvider {
+  protected serviceName = 'gerrit' as const;
+
   constructor(config: ProviderConfig) {
     super(config);
   }

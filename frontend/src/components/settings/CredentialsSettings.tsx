@@ -56,7 +56,7 @@ export function CredentialsSettings() {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-slate-500">
+      <p className="text-sm text-slate-400">
         Add credentials for authenticated access to data sources (required for "My Changes" queries).
       </p>
 
@@ -64,11 +64,11 @@ export function CredentialsSettings() {
         {credentials?.map((cred: Credential) => (
           <div
             key={cred.id}
-            className="flex items-center justify-between p-3 bg-slate-50 rounded-lg"
+            className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg"
           >
             <div>
-              <p className="font-medium text-slate-700">{getDataSourceName(cred.dataSourceId)}</p>
-              <p className="text-sm text-slate-500">User: {cred.username}</p>
+              <p className="font-medium text-slate-200">{getDataSourceName(cred.dataSourceId)}</p>
+              <p className="text-sm text-slate-400">User: {cred.username}</p>
             </div>
             <button
               onClick={() => {
@@ -76,7 +76,7 @@ export function CredentialsSettings() {
                   deleteMutation.mutate(cred.dataSourceId);
                 }
               }}
-              className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+              className="p-2 text-slate-500 hover:text-red-400 transition-colors"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -87,13 +87,13 @@ export function CredentialsSettings() {
       </div>
 
       {isAdding ? (
-        <form onSubmit={handleSubmit} className="space-y-3 p-3 bg-slate-50 rounded-lg">
+        <form onSubmit={handleSubmit} className="space-y-3 p-3 bg-slate-700/50 rounded-lg">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Data Source</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Data Source</label>
             <select
               value={newCred.dataSourceId}
               onChange={(e) => setNewCred({ ...newCred, dataSourceId: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
               required
             >
               <option value={0}>Select a data source</option>
@@ -103,22 +103,22 @@ export function CredentialsSettings() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
             <input
               type="text"
               value={newCred.username}
               onChange={(e) => setNewCred({ ...newCred, username: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Password / HTTP Token</label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Password / HTTP Token</label>
             <input
               type="password"
               value={newCred.password}
               onChange={(e) => setNewCred({ ...newCred, password: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
               required
             />
           </div>
@@ -126,7 +126,7 @@ export function CredentialsSettings() {
             <button
               type="button"
               onClick={() => setIsAdding(false)}
-              className="px-3 py-2 text-sm text-slate-600 hover:text-slate-800"
+              className="px-3 py-2 text-sm text-slate-400 hover:text-slate-200"
             >
               Cancel
             </button>
@@ -143,7 +143,7 @@ export function CredentialsSettings() {
         <button
           onClick={() => setIsAdding(true)}
           disabled={!availableDataSources?.length}
-          className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full px-3 py-2 text-sm text-blue-400 border border-blue-500/50 rounded-md hover:bg-blue-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           + Add Credentials
         </button>

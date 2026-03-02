@@ -3,11 +3,9 @@ import { Dashboard } from './components/dashboard/Dashboard';
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-900">
       <Header />
-      <main className="container mx-auto px-4 py-6">
-        <Dashboard />
-      </main>
+      <Dashboard />
     </div>
   );
 }

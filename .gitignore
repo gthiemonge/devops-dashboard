@@ -5,6 +5,7 @@ dist/
 .env
 .env.local
 backend/data/
+backend/logs/
 *.db
 *.db-wal
 *.db-shm

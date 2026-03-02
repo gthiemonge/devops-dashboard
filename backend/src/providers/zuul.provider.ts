@@ -11,6 +11,7 @@ export interface ZuulBuildsQuery {
 }
 
 export class ZuulProvider extends BaseProvider {
+  protected serviceName = 'zuul' as const;
   private tenant: string;
 
   constructor(config: ProviderConfig, tenant: string = 'openstack') {

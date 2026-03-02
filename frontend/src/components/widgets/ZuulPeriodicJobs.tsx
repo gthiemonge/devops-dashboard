@@ -44,12 +44,12 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   }
 
   if (error) {
-    return <div className="text-red-500 text-sm">Error: {(error as Error).message}</div>;
+    return <div className="text-red-400 text-sm">Error: {(error as Error).message}</div>;
   }
 
   if (!builds || builds.length === 0) {
     return (
-      <div className="text-green-600 text-sm flex items-center gap-2">
+      <div className="text-green-400 text-sm flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
         </svg>
@@ -59,24 +59,24 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {builds.map((build: ZuulBuild) => (
         <a
           key={build.uuid}
           href={build.log_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block p-2 rounded hover:bg-slate-50 transition-colors border-l-2 border-red-400"
+          className="block p-2 rounded hover:bg-slate-700/50 transition-colors border-l-2 border-red-500"
         >
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-800 truncate">
+            <p className="text-sm text-slate-200 truncate">
               {build.job_name}
             </p>
             <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
               <span>{build.branch}</span>
-              <span className="text-slate-300">·</span>
+              <span className="text-slate-600">·</span>
               <span>{formatDuration(build.duration)}</span>
-              <span className="text-slate-300">·</span>
+              <span className="text-slate-600">·</span>
               <span>{formatDate(build.end_time)}</span>
             </div>
           </div>

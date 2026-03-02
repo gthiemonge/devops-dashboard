@@ -54,7 +54,9 @@ export function DashboardGrid() {
       layout={gridLayout}
       cols={12}
       rowHeight={100}
-      width={1200}
+      width={window.innerWidth}
+      margin={[0, 0]}
+      containerPadding={[0, 0]}
       onLayoutChange={handleLayoutChange}
       draggableHandle=".widget-drag-handle"
       isResizable={true}

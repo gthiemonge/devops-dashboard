@@ -24,14 +24,14 @@ function getLabelBadge(change: GerritChange, labelName: string): JSX.Element | n
 
   if (label.approved || (label.value !== undefined && label.value > 0)) {
     return (
-      <span className="px-1.5 py-0.5 text-xs rounded bg-green-100 text-green-700">
+      <span className="px-1.5 py-0.5 text-xs rounded bg-green-900/50 text-green-400">
         {labelName === 'Code-Review' ? 'CR+' : 'V+'}
       </span>
     );
   }
   if (label.rejected || (label.value !== undefined && label.value < 0)) {
     return (
-      <span className="px-1.5 py-0.5 text-xs rounded bg-red-100 text-red-700">
+      <span className="px-1.5 py-0.5 text-xs rounded bg-red-900/50 text-red-400">
         {labelName === 'Code-Review' ? 'CR-' : 'V-'}
       </span>
     );
@@ -56,7 +56,7 @@ export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
   }
 
   if (error) {
-    return <div className="text-red-500 text-sm">Error: {(error as Error).message}</div>;
+    return <div className="text-red-400 text-sm">Error: {(error as Error).message}</div>;
   }
 
   if (!changes || changes.length === 0) {
@@ -64,18 +64,18 @@ export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {changes.map((change: GerritChange) => (
         <a
           key={change.id}
           href={`https://review.opendev.org/c/${change.project}/+/${change._number}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="block p-2 rounded hover:bg-slate-50 transition-colors"
+          className="block p-2 rounded hover:bg-slate-700/50 transition-colors"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-800 truncate">
+              <p className="text-sm text-slate-200 truncate">
                 {change.subject}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">

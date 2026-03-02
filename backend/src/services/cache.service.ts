@@ -1,5 +1,6 @@
 import NodeCache from 'node-cache';
 import { config } from '../config/env.js';
+import { logApiCall } from './logger.service.js';
 
 class CacheService {
   private cache: NodeCache;
@@ -34,6 +35,16 @@ class CacheService {
   getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl?: number): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== undefined) {
+      const service = key.startsWith('gerrit') || key.startsWith('summary:gerrit') ? 'gerrit' : 'zuul';
+      logApiCall({
+        timestamp: new Date().toISOString(),
+        service,
+        method: 'GET',
+        url: key,
+        duration: 0,
+        status: 'success',
+        cached: true,
+      });
       return Promise.resolve(cached);
     }
     return fetchFn().then((data) => {
