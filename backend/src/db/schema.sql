@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS data_sources (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
-    type TEXT NOT NULL CHECK (type IN ('gerrit', 'zuul', 'github', 'jira', 'launchpad')),
+    type TEXT NOT NULL CHECK (type IN ('gerrit', 'zuul', 'irc', 'github', 'jira', 'launchpad')),
     base_url TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -60,13 +60,15 @@ CREATE INDEX IF NOT EXISTS idx_data_sources_type ON data_sources(type);
 -- Seed default data sources
 INSERT OR IGNORE INTO data_sources (name, type, base_url) VALUES
     ('OpenDev Gerrit', 'gerrit', 'https://review.opendev.org'),
-    ('OpenStack Zuul', 'zuul', 'https://zuul.openstack.org');
+    ('OpenStack Zuul', 'zuul', 'https://zuul.openstack.org'),
+    ('OpenDev IRC Logs', 'irc', 'https://meetings.opendev.org/irclogs');
 
 -- Seed widget types
 INSERT OR IGNORE INTO widget_types (name, display_name, description, supported_source_types, default_config) VALUES
     ('gerrit_recent_changes', 'Recent Gerrit Changes', 'Shows recent changes for a project', '["gerrit"]', '{"project": "openstack/octavia", "limit": 10}'),
     ('gerrit_my_changes', 'My Gerrit Changes', 'Shows your changes needing attention', '["gerrit"]', '{"limit": 10}'),
-    ('zuul_periodic_jobs', 'Failed Periodic Jobs', 'Shows failed periodic Zuul jobs', '["zuul"]', '{"project": "openstack/octavia", "pipeline": "periodic", "limit": 10}');
+    ('zuul_periodic_jobs', 'Failed Periodic Jobs', 'Shows failed periodic Zuul jobs', '["zuul"]', '{"project": "openstack/octavia", "pipeline": "periodic", "limit": 10}'),
+    ('irc_recent_messages', 'IRC Recent Messages', 'Shows recent IRC messages from a channel', '["irc"]', '{"channel": "openstack-lbaas", "limit": 20}');
 
 -- Seed default layout
 INSERT OR IGNORE INTO layouts (id, name, items) VALUES (1, 'default', '[]');
