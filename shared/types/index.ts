@@ -99,6 +99,15 @@ export interface GerritLabel {
 }
 
 // Zuul Types
+export interface ZuulBuildRef {
+  project: string;
+  branch: string;
+  change?: number;
+  patchset?: string;
+  ref: string;
+  ref_url?: string;
+}
+
 export interface ZuulBuild {
   uuid: string;
   job_name: string;
@@ -106,12 +115,10 @@ export interface ZuulBuild {
   start_time: string;
   end_time: string;
   duration: number;
-  project: string;
-  branch: string;
   pipeline: string;
-  ref: string;
   log_url: string;
   event_id: string;
+  ref: ZuulBuildRef;
 }
 
 // API Response Types

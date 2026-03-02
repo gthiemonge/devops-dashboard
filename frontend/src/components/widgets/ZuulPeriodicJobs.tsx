@@ -73,7 +73,7 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
               {build.job_name}
             </p>
             <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-              <span>{build.branch}</span>
+              <span>{build.ref.branch}</span>
               <span className="text-slate-600">·</span>
               <span>{formatDuration(build.duration)}</span>
               <span className="text-slate-600">·</span>

@@ -12,11 +12,9 @@ export interface ZuulBuildsQuery {
 
 export class ZuulProvider extends BaseProvider {
   protected serviceName = 'zuul' as const;
-  private tenant: string;
 
-  constructor(config: ProviderConfig, tenant: string = 'openstack') {
+  constructor(config: ProviderConfig) {
     super(config);
-    this.tenant = tenant;
   }
 
   async getBuilds(query: ZuulBuildsQuery = {}): Promise<ZuulBuild[]> {
@@ -28,7 +26,7 @@ export class ZuulProvider extends BaseProvider {
     if (query.limit) params.append('limit', query.limit.toString());
     if (query.skip) params.append('skip', query.skip.toString());
 
-    const path = `/api/tenant/${this.tenant}/builds?${params.toString()}`;
+    const path = `/api/builds?${params.toString()}`;
     return this.fetch<ZuulBuild[]>(path);
   }
 
@@ -43,8 +41,7 @@ export class ZuulProvider extends BaseProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const path = `/api/tenant/${this.tenant}/status`;
-      await this.fetch<unknown>(path);
+      await this.fetch<unknown>('/api/builds?limit=1');
       return true;
     } catch {
       return false;
