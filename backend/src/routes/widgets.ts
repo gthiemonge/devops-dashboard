@@ -103,7 +103,7 @@ widgetsRouter.put('/:id', (req, res) => {
   }
 
   updates.push("updated_at = datetime('now')");
-  values.push(parseInt(req.params.id));
+  values.push(parseInt(req.params.id as string));
 
   const result = db.prepare(
     `UPDATE widgets SET ${updates.join(', ')} WHERE id = ?`

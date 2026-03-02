@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { useIrcMessages } from '../../hooks/useIrcMessages';
 import type { Widget, IrcMessage } from '@dashboard/shared';
 

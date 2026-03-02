@@ -100,16 +100,17 @@ async function getWidgetSummary(widget: Widget): Promise<WidgetSummary> {
 
 summaryRouter.get('/', async (_req: Request, res: Response) => {
   try {
-    const rows = db.prepare('SELECT * FROM widgets').all() as DbWidget[];
+    const rows = db.prepare('SELECT * FROM widgets').all() as (DbWidget & { dashboard_id: number; refresh_interval: number; created_at: string; updated_at: string })[];
     const widgets: Widget[] = rows.map(row => ({
       id: row.id,
+      dashboardId: row.dashboard_id,
       type: row.type as Widget['type'],
       title: row.title,
       dataSourceId: row.data_source_id,
       config: JSON.parse(row.config),
-      refreshInterval: 300,
-      createdAt: '',
-      updatedAt: '',
+      refreshInterval: row.refresh_interval || 300,
+      createdAt: row.created_at || '',
+      updatedAt: row.updated_at || '',
     }));
 
     const summaries = await Promise.all(widgets.map(getWidgetSummary));

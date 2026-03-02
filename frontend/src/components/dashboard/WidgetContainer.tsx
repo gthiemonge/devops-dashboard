@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { useDeleteWidget } from '../../hooks/useWidgets';
 import { GerritRecentChanges } from '../widgets/GerritRecentChanges';

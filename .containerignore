@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs (will be built in container)
+**/dist/
+frontend/dist/
+backend/dist/
+shared/dist/
+
+# Development files
+.git/
+.gitignore
+.claude/
+*.md
+README.md
+LICENSE
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files (should be passed at runtime)
+.env
+.env.*
+!.env.example
+
+# Database (data should be mounted as volume)
+backend/data/
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+__tests__/
+coverage/

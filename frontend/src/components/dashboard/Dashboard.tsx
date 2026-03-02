@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useDashboards } from '../../hooks/useDashboards';
 import { useWidgets, useDataSources } from '../../hooks/useWidgets';
 import { useDashboardStore } from '../../store/dashboardStore';
@@ -9,7 +8,6 @@ import { WidgetPicker } from '../settings/WidgetPicker';
 import { WidgetConfigModal } from '../settings/WidgetConfigModal';
 
 export function Dashboard() {
-  const queryClient = useQueryClient();
   const { isLoading: dashboardsLoading } = useDashboards();
   const { currentDashboardId, isSettingsOpen, isWidgetPickerOpen, editingWidgetId } = useDashboardStore();
   const { isLoading: widgetsLoading, refetch: refetchWidgets } = useWidgets(currentDashboardId ?? undefined);

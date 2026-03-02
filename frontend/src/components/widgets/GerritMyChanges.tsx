@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type JSX } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
 import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, GerritChange } from '@dashboard/shared';

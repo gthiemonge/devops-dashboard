@@ -84,7 +84,7 @@ credentialsRouter.put('/:dataSourceId', (req, res) => {
   }
 
   updates.push("updated_at = datetime('now')");
-  values.push(parseInt(req.params.dataSourceId));
+  values.push(parseInt(req.params.dataSourceId as string));
 
   const result = db.prepare(
     `UPDATE credentials SET ${updates.join(', ')} WHERE data_source_id = ?`

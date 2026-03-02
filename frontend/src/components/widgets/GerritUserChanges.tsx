@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
 import type { Widget, GerritChange } from '@dashboard/shared';
 

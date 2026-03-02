@@ -71,7 +71,7 @@ dashboardsRouter.get('/', (_req: Request, res: Response) => {
 // Get single dashboard
 dashboardsRouter.get('/:id', (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const row = db.prepare('SELECT * FROM dashboards WHERE id = ?').get(id) as DbDashboard | undefined;
 
     if (!row) {
@@ -115,7 +115,7 @@ dashboardsRouter.post('/', (req: Request, res: Response) => {
 // Update dashboard
 dashboardsRouter.put('/:id', (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
     const dto: UpdateDashboardDto = req.body;
 
     const existing = db.prepare('SELECT * FROM dashboards WHERE id = ?').get(id) as DbDashboard | undefined;
@@ -159,7 +159,7 @@ dashboardsRouter.put('/:id', (req: Request, res: Response) => {
 // Delete dashboard
 dashboardsRouter.delete('/:id', (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
 
     // Check if it's the last dashboard
     const count = db.prepare('SELECT COUNT(*) as count FROM dashboards').get() as { count: number };
@@ -214,7 +214,7 @@ dashboardsRouter.post('/reorder', (req: Request, res: Response) => {
 // Export dashboard
 dashboardsRouter.get('/:id/export', (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id as string);
 
     const dashboard = db.prepare('SELECT * FROM dashboards WHERE id = ?').get(id) as DbDashboard | undefined;
     if (!dashboard) {
