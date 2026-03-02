@@ -39,11 +39,25 @@ function getLabelBadge(change: GerritChange, labelName: string): JSX.Element | n
   return null;
 }
 
+function toGerritProject(project: string): string {
+  // If already a regex (starts with ^), use as-is
+  if (project.startsWith('^')) return project;
+  // Convert glob wildcards to Gerrit regex
+  if (project.includes('*')) {
+    // Escape regex special chars except *, then convert * to .*
+    const escaped = project.replace(/[.+?{}()|[\]\\]/g, '\\$&');
+    const regex = escaped.replace(/\*/g, '.*');
+    return `^${regex}`;
+  }
+  return project;
+}
+
 function buildProjectQuery(projectInput: string): string {
   const projects = projectInput.split(',').map(p => p.trim()).filter(Boolean);
   if (projects.length === 0) return '';
-  if (projects.length === 1) return `project:${projects[0]}`;
-  return `(${projects.map(p => `project:${p}`).join(' OR ')})`;
+  const formatted = projects.map(p => `project:${toGerritProject(p)}`);
+  if (formatted.length === 1) return formatted[0];
+  return `(${formatted.join(' OR ')})`;
 }
 
 export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
