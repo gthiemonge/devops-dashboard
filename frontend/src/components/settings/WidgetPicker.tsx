@@ -9,43 +9,55 @@ interface WidgetTypeOption {
   name: string;
   description: string;
   sourceType: 'gerrit' | 'zuul' | 'irc';
+  icon: string;
+  color: string;
   defaultConfig: Record<string, unknown>;
 }
 
 const widgetTypes: WidgetTypeOption[] = [
   {
     type: 'gerrit_recent_changes',
-    name: 'Recent Gerrit Changes',
-    description: 'Shows recent open changes for a project',
+    name: 'Recent Changes',
+    description: 'Open changes for a project',
     sourceType: 'gerrit',
+    icon: 'gerrit',
+    color: 'emerald',
     defaultConfig: { project: 'openstack/octavia', limit: 10 },
   },
   {
     type: 'gerrit_my_changes',
-    name: 'My Gerrit Changes',
-    description: 'Shows your changes that need attention (requires auth)',
+    name: 'My Changes',
+    description: 'Your changes needing attention',
     sourceType: 'gerrit',
+    icon: 'gerrit',
+    color: 'emerald',
     defaultConfig: { limit: 10 },
   },
   {
     type: 'gerrit_user_changes',
-    name: "User's Gerrit Changes",
-    description: "Shows another user's open changes (no auth required)",
+    name: "User's Changes",
+    description: "Track another user's changes",
     sourceType: 'gerrit',
+    icon: 'gerrit',
+    color: 'emerald',
     defaultConfig: { owner: '', limit: 10 },
   },
   {
     type: 'zuul_periodic_jobs',
-    name: 'Failed Periodic Jobs',
-    description: 'Shows failed Zuul periodic jobs',
+    name: 'Failed Jobs',
+    description: 'Failed Zuul periodic jobs',
     sourceType: 'zuul',
+    icon: 'zuul',
+    color: 'amber',
     defaultConfig: { project: 'openstack/octavia', pipeline: 'periodic', limit: 10 },
   },
   {
     type: 'irc_recent_messages',
-    name: 'IRC Recent Messages',
-    description: 'Shows recent IRC messages from a channel',
+    name: 'IRC Messages',
+    description: 'Recent channel messages',
     sourceType: 'irc',
+    icon: 'irc',
+    color: 'purple',
     defaultConfig: { channel: 'openstack-lbaas', limit: 20 },
   },
 ];
@@ -71,6 +83,9 @@ function generateTitle(type: WidgetType, config: Record<string, unknown>): strin
       return 'Widget';
   }
 }
+
+const inputClass = "w-full px-3 py-2 bg-[#0a0e14] border border-[#30363d] rounded text-xs text-[#e6edf3] font-mono focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/20";
+const labelClass = "block text-xs font-medium text-[#7d8590] mb-1.5 uppercase tracking-wider";
 
 export function WidgetPicker() {
   const { closeWidgetPicker, dataSources } = useDashboardStore();
@@ -108,15 +123,24 @@ export function WidgetPicker() {
   return (
     <Modal title="Add Widget" onClose={closeWidgetPicker}>
       {!selectedType ? (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           {widgetTypes.map((wt) => (
             <button
               key={wt.type}
               onClick={() => handleSelectType(wt)}
-              className="w-full text-left p-3 rounded-lg border border-slate-600 hover:border-blue-500 hover:bg-slate-700/50 transition-colors"
+              className={`
+                text-left p-3 rounded border border-[#21262d]
+                hover:border-${wt.color}-500/50 hover:bg-[#161b22]
+                transition-all group
+              `}
             >
-              <p className="font-medium text-slate-200">{wt.name}</p>
-              <p className="text-sm text-slate-400">{wt.description}</p>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`w-2 h-2 rounded-full bg-${wt.color}-500`}></span>
+                <p className="text-xs font-medium text-[#e6edf3] group-hover:text-cyan-400 transition-colors">
+                  {wt.name}
+                </p>
+              </div>
+              <p className="text-[10px] text-[#7d8590] leading-tight">{wt.description}</p>
             </button>
           ))}
         </div>
@@ -124,32 +148,35 @@ export function WidgetPicker() {
         <div className="space-y-4">
           <button
             onClick={() => setSelectedType(null)}
-            className="text-sm text-blue-400 hover:text-blue-300"
+            className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-mono"
           >
-            &larr; Back to widget types
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+            Back
           </button>
 
           {selectedType.type === 'gerrit_recent_changes' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Project(s)</label>
+                <label className={labelClass}>Project(s)</label>
                 <input
                   type="text"
                   value={(config.project as string) || ''}
                   onChange={(e) => setConfig({ ...config, project: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                  placeholder="openstack/octavia, openstack/neutron or octavia*"
+                  className={inputClass}
+                  placeholder="openstack/octavia, openstack/neutron"
                 />
-                <p className="text-xs text-slate-500 mt-1">Comma-separated or wildcards (*)</p>
+                <p className="text-[10px] text-[#484f58] mt-1">Comma-separated or wildcards (*)</p>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Branch (optional)</label>
+                <label className={labelClass}>Branch (optional)</label>
                 <input
                   type="text"
                   value={(config.branch as string) || ''}
                   onChange={(e) => setConfig({ ...config, branch: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                  placeholder="stable/* for backports, master, etc."
+                  className={inputClass}
+                  placeholder="stable/* for backports"
                 />
               </div>
             </>
@@ -157,12 +184,12 @@ export function WidgetPicker() {
 
           {selectedType.type === 'gerrit_user_changes' && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+              <label className={labelClass}>Username</label>
               <input
                 type="text"
                 value={(config.owner as string) || ''}
                 onChange={(e) => setConfig({ ...config, owner: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                className={inputClass}
                 placeholder="username or email"
               />
             </div>
@@ -171,22 +198,22 @@ export function WidgetPicker() {
           {selectedType.type === 'zuul_periodic_jobs' && (
             <>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Project</label>
+                <label className={labelClass}>Project</label>
                 <input
                   type="text"
                   value={(config.project as string) || ''}
                   onChange={(e) => setConfig({ ...config, project: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className={inputClass}
                   placeholder="openstack/octavia"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Pipeline</label>
+                <label className={labelClass}>Pipeline</label>
                 <input
                   type="text"
                   value={(config.pipeline as string) || ''}
                   onChange={(e) => setConfig({ ...config, pipeline: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className={inputClass}
                   placeholder="periodic"
                 />
               </div>
@@ -195,46 +222,45 @@ export function WidgetPicker() {
 
           {selectedType.type === 'irc_recent_messages' && (
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Channel Name</label>
-              <div className="flex items-center">
-                <span className="text-slate-500 mr-1">#</span>
+              <label className={labelClass}>Channel</label>
+              <div className="flex items-center gap-1">
+                <span className="text-[#484f58] text-xs">#</span>
                 <input
                   type="text"
                   value={(config.channel as string) || ''}
                   onChange={(e) => setConfig({ ...config, channel: e.target.value })}
-                  className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className={inputClass}
                   placeholder="openstack-lbaas"
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1">Channel name without the # prefix</p>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Max Items</label>
+            <label className={labelClass}>Max Items</label>
             <input
               type="number"
               value={(config.limit as number) || 10}
               onChange={(e) => setConfig({ ...config, limit: parseInt(e.target.value) || 10 })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+              className={inputClass}
               min={1}
               max={50}
             />
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 pt-2 border-t border-[#21262d]">
             <button
               onClick={closeWidgetPicker}
-              className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200"
+              className="px-3 py-1.5 text-xs text-[#7d8590] hover:text-[#e6edf3] transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={createWidget.isPending}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              className="px-3 py-1.5 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-500 disabled:opacity-50 transition-colors font-medium"
             >
-              {createWidget.isPending ? 'Creating...' : 'Create Widget'}
+              {createWidget.isPending ? 'Creating...' : 'Create'}
             </button>
           </div>
         </div>

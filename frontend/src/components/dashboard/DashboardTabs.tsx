@@ -61,10 +61,11 @@ export function DashboardTabs() {
   };
 
   return (
-    <div className="flex items-center gap-1 overflow-x-auto">
+    <div className="flex items-center gap-0.5 py-1 overflow-x-auto">
       {dashboards.map((dashboard) => {
         const isActive = dashboard.id === currentDashboardId;
         const isRenaming = dashboard.id === renamingDashboardId;
+        const hasAttention = dashboard.attentionCount > 0;
 
         return (
           <div
@@ -72,11 +73,12 @@ export function DashboardTabs() {
             onClick={() => !isRenaming && setCurrentDashboard(dashboard.id)}
             onDoubleClick={() => startRenamingDashboard(dashboard.id)}
             className={`
-              group relative flex items-center gap-2 px-3 py-1.5 rounded-t-md cursor-pointer
-              transition-colors select-none min-w-0
+              group relative flex items-center gap-2 px-3 py-1.5 cursor-pointer
+              transition-all select-none text-xs font-medium
+              border-b-2 -mb-[1px]
               ${isActive
-                ? 'bg-slate-800 text-slate-100'
-                : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+                ? 'text-cyan-400 border-cyan-400 bg-[#161b22]'
+                : 'text-[#7d8590] border-transparent hover:text-[#e6edf3] hover:bg-[#161b22]/50'
               }
             `}
           >
@@ -88,36 +90,42 @@ export function DashboardTabs() {
                 onChange={(e) => setRenameValue(e.target.value)}
                 onBlur={() => handleRename(dashboard.id)}
                 onKeyDown={(e) => handleKeyDown(e, dashboard.id)}
-                className="bg-slate-700 text-slate-100 text-sm px-1 py-0.5 rounded w-24 outline-none border border-blue-500"
+                className="bg-[#0d1117] text-cyan-400 text-xs px-1.5 py-0.5 rounded w-24 outline-none border border-cyan-500 font-mono"
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
               <>
-                <span className="text-sm truncate max-w-32">{dashboard.name}</span>
-                {dashboard.attentionCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs rounded-full bg-red-500/20 text-red-400 font-medium">
+                {/* Status dot for active dashboard */}
+                {isActive && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                )}
+
+                <span className="truncate max-w-28 font-mono">{dashboard.name}</span>
+
+                {/* Badge */}
+                {hasAttention ? (
+                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
                     {dashboard.attentionCount}
                   </span>
-                )}
-                {dashboard.attentionCount === 0 && dashboard.widgetCount > 0 && (
-                  <span className="px-1.5 py-0.5 text-xs rounded-full bg-slate-700 text-slate-400">
+                ) : dashboard.widgetCount > 0 ? (
+                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#21262d] text-[#7d8590] font-mono">
                     {dashboard.widgetCount}
                   </span>
-                )}
+                ) : null}
               </>
             )}
 
-            {/* Close button - only show on hover for non-active or when active and more than 1 dashboard */}
+            {/* Close button */}
             {!isRenaming && dashboards.length > 1 && (
               <button
                 onClick={(e) => handleDelete(dashboard.id, e)}
                 className={`
-                  p-0.5 rounded transition-opacity
-                  ${isActive ? 'opacity-50 hover:opacity-100' : 'opacity-0 group-hover:opacity-50 hover:!opacity-100'}
-                  hover:text-red-400
+                  p-0.5 rounded transition-all
+                  ${isActive ? 'opacity-40 hover:opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-100'}
+                  hover:text-red-400 hover:bg-red-500/10
                 `}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -130,7 +138,7 @@ export function DashboardTabs() {
       <button
         onClick={handleAddDashboard}
         disabled={createDashboard.isPending}
-        className="p-1.5 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-colors"
+        className="p-1.5 ml-1 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
         title="Add dashboard"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

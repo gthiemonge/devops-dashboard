@@ -6,7 +6,6 @@ interface IrcRecentMessagesProps {
 }
 
 function formatTime(timestamp: string, time: string): string {
-  // If timestamp includes full ISO date, use it for relative time
   const date = new Date(timestamp.includes('T') ? timestamp : `${timestamp}`);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -16,22 +15,17 @@ function formatTime(timestamp: string, time: string): string {
   if (diffMins < 60) return time;
   if (diffHours < 24) return time;
 
-  // Show date for older messages
   const dateStr = timestamp.split('T')[0];
-  return `${dateStr.slice(5)} ${time}`; // MM-DD HH:MM
+  return `${dateStr.slice(5)} ${time}`;
 }
 
-function getAvatarColor(nick: string, providedColor?: string): string {
-  if (providedColor && providedColor !== '#666') {
-    return providedColor;
-  }
-  // Generate consistent color from nick
+function getAvatarColor(nick: string): string {
   let hash = 0;
   for (let i = 0; i < nick.length; i++) {
     hash = nick.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 45%, 45%)`;
+  return `hsl(${hue}, 50%, 50%)`;
 }
 
 function getInitials(nick: string): string {
@@ -39,7 +33,6 @@ function getInitials(nick: string): string {
 }
 
 function renderMessageContent(message: string): JSX.Element {
-  // Convert URLs to links
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = message.split(urlRegex);
 
@@ -47,16 +40,15 @@ function renderMessageContent(message: string): JSX.Element {
     <>
       {parts.map((part, i) => {
         if (urlRegex.test(part)) {
-          // Reset regex lastIndex
           urlRegex.lastIndex = 0;
-          const displayUrl = part.length > 60 ? part.slice(0, 57) + '...' : part;
+          const displayUrl = part.length > 50 ? part.slice(0, 47) + '...' : part;
           return (
             <a
               key={i}
               href={part}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 hover:underline break-all"
+              className="text-cyan-400 hover:text-cyan-300 hover:underline"
               onMouseDown={(e) => e.stopPropagation()}
             >
               {displayUrl}
@@ -70,57 +62,56 @@ function renderMessageContent(message: string): JSX.Element {
 }
 
 function MessageBubble({ msg, isConsecutive }: { msg: IrcMessage; isConsecutive: boolean }) {
-  const avatarColor = getAvatarColor(msg.nick, msg.color);
+  const avatarColor = getAvatarColor(msg.nick);
   const isBot = msg.nick.toLowerCase().includes('bot') || msg.nick === 'opendevreview';
   const isAction = msg.type === 'action';
 
   if (isAction) {
     return (
-      <div className="flex items-center gap-2 py-1 px-2 text-slate-400 text-xs italic">
-        <span className="text-slate-500">*</span>
+      <div className="flex items-center gap-2 py-0.5 px-2 text-[#7d8590] text-[10px] italic font-mono">
+        <span className="text-[#484f58]">*</span>
         <span style={{ color: avatarColor }}>{msg.nick}</span>
         <span>{msg.message}</span>
-        <span className="text-slate-600 ml-auto text-[10px]">{msg.time}</span>
       </div>
     );
   }
 
   return (
-    <div className={`flex gap-2 ${isConsecutive ? 'mt-0.5' : 'mt-2'} group`}>
+    <div className={`flex gap-2 ${isConsecutive ? 'mt-0' : 'mt-1.5'} group px-1`}>
       {!isConsecutive ? (
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium text-white flex-shrink-0"
+          className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0 font-mono"
           style={{ backgroundColor: avatarColor }}
         >
           {getInitials(msg.nick)}
         </div>
       ) : (
-        <div className="w-7 flex-shrink-0" />
+        <div className="w-5 flex-shrink-0" />
       )}
       <div className="flex-1 min-w-0">
         {!isConsecutive && (
           <div className="flex items-baseline gap-2 mb-0.5">
             <span
-              className={`text-xs font-medium ${isBot ? 'text-slate-500' : ''}`}
+              className={`text-[10px] font-mono font-medium ${isBot ? 'text-[#484f58]' : ''}`}
               style={{ color: isBot ? undefined : avatarColor }}
             >
               {msg.nick}
             </span>
-            <span className="text-[10px] text-slate-600">
+            <span className="text-[9px] text-[#484f58] font-mono">
               {formatTime(msg.timestamp, msg.time)}
             </span>
           </div>
         )}
         <div
-          className={`text-sm text-slate-300 leading-relaxed ${
-            isBot ? 'text-slate-400 text-xs' : ''
+          className={`text-xs leading-relaxed ${
+            isBot ? 'text-[#484f58]' : 'text-[#e6edf3]'
           }`}
         >
           {renderMessageContent(msg.message)}
         </div>
       </div>
       {isConsecutive && (
-        <span className="text-[10px] text-slate-700 group-hover:text-slate-600 transition-colors self-center">
+        <span className="text-[9px] text-[#30363d] group-hover:text-[#484f58] transition-colors self-center font-mono">
           {msg.time}
         </span>
       )}
@@ -137,10 +128,10 @@ function DateDivider({ date }: { date: string }) {
   });
 
   return (
-    <div className="flex items-center gap-3 my-3">
-      <div className="flex-1 h-px bg-slate-700" />
-      <span className="text-[10px] text-slate-500 uppercase tracking-wider">{formatted}</span>
-      <div className="flex-1 h-px bg-slate-700" />
+    <div className="flex items-center gap-2 my-2 px-1">
+      <div className="flex-1 h-px bg-[#21262d]" />
+      <span className="text-[9px] text-[#484f58] font-mono uppercase tracking-wider">{formatted}</span>
+      <div className="flex-1 h-px bg-[#21262d]" />
     </div>
   );
 }
@@ -158,29 +149,37 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
   });
 
   if (!channel) {
-    return <div className="text-slate-500 text-sm">Configure an IRC channel to track</div>;
+    return <div className="text-[#7d8590] text-xs font-mono">Configure a channel</div>;
   }
 
   if (isLoading) {
-    return <div className="text-slate-500 text-sm">Loading messages...</div>;
+    return (
+      <div className="flex items-center gap-2 text-[#7d8590] text-xs">
+        <div className="w-3 h-3 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+        <span className="font-mono">Loading...</span>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="text-red-400 text-sm">Error: {(error as Error).message}</div>;
+    return (
+      <div className="flex items-center gap-2 text-red-400 text-xs">
+        <span className="font-mono">Error: {(error as Error).message}</span>
+      </div>
+    );
   }
 
   const messages = data?.messages || [];
 
   if (messages.length === 0) {
-    return <div className="text-slate-500 text-sm">No recent messages in #{channel}</div>;
+    return <div className="text-[#7d8590] text-xs font-mono">No recent messages</div>;
   }
 
-  // Group messages by date and check for consecutive messages from same user
   let currentDate = '';
   let lastNick = '';
 
   return (
-    <div className="space-y-0 px-1">
+    <div className="space-y-0">
       {messages.map((msg, idx) => {
         const showDateDivider = msg.date !== currentDate;
         const isConsecutive = !showDateDivider && msg.nick === lastNick && msg.type === 'message';

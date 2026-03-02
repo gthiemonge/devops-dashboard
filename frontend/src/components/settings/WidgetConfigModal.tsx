@@ -8,6 +8,9 @@ interface WidgetConfigModalProps {
   widgetId: number;
 }
 
+const inputClass = "w-full px-3 py-2 bg-[#0a0e14] border border-[#30363d] rounded text-xs text-[#e6edf3] font-mono focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/20";
+const labelClass = "block text-xs font-medium text-[#7d8590] mb-1.5 uppercase tracking-wider";
+
 export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
   const { closeWidgetEditor, widgets } = useDashboardStore();
   const updateWidget = useUpdateWidget();
@@ -43,78 +46,77 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
   };
 
   return (
-    <Modal title={`Configure: ${widget.title}`} onClose={closeWidgetEditor}>
+    <Modal title="Configure Widget" onClose={closeWidgetEditor}>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Title</label>
+          <label className={labelClass}>Title</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+            className={inputClass}
           />
         </div>
 
         {widget.type === 'gerrit_recent_changes' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Project(s)</label>
+              <label className={labelClass}>Project(s)</label>
               <input
                 type="text"
                 value={(config.project as string) || ''}
                 onChange={(e) => setConfig({ ...config, project: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                placeholder="openstack/octavia, openstack/neutron or octavia*"
+                className={inputClass}
+                placeholder="openstack/octavia, openstack/neutron"
               />
-              <p className="text-xs text-slate-500 mt-1">Comma-separated or wildcards (*)</p>
+              <p className="text-[10px] text-[#484f58] mt-1">Comma-separated or wildcards (*)</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Branch (optional)</label>
+              <label className={labelClass}>Branch (optional)</label>
               <input
                 type="text"
                 value={(config.branch as string) || ''}
                 onChange={(e) => setConfig({ ...config, branch: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                placeholder="stable/* for backports, master, etc."
+                className={inputClass}
+                placeholder="stable/* for backports"
               />
             </div>
           </>
         )}
 
         {widget.type === 'zuul_periodic_jobs' && (
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Project</label>
-            <input
-              type="text"
-              value={(config.project as string) || ''}
-              onChange={(e) => setConfig({ ...config, project: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-              placeholder="openstack/octavia"
-            />
-          </div>
-        )}
-
-        {widget.type === 'zuul_periodic_jobs' && (
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Pipeline</label>
-            <input
-              type="text"
-              value={(config.pipeline as string) || ''}
-              onChange={(e) => setConfig({ ...config, pipeline: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-              placeholder="periodic"
-            />
-          </div>
+          <>
+            <div>
+              <label className={labelClass}>Project</label>
+              <input
+                type="text"
+                value={(config.project as string) || ''}
+                onChange={(e) => setConfig({ ...config, project: e.target.value })}
+                className={inputClass}
+                placeholder="openstack/octavia"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Pipeline</label>
+              <input
+                type="text"
+                value={(config.pipeline as string) || ''}
+                onChange={(e) => setConfig({ ...config, pipeline: e.target.value })}
+                className={inputClass}
+                placeholder="periodic"
+              />
+            </div>
+          </>
         )}
 
         {widget.type === 'gerrit_my_changes' && (
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Additional Query</label>
+            <label className={labelClass}>Additional Query</label>
             <input
               type="text"
               value={(config.query as string) || ''}
               onChange={(e) => setConfig({ ...config, query: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+              className={inputClass}
               placeholder="project:openstack/octavia"
             />
           </div>
@@ -123,22 +125,22 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
         {widget.type === 'gerrit_user_changes' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+              <label className={labelClass}>Username</label>
               <input
                 type="text"
                 value={(config.owner as string) || ''}
                 onChange={(e) => setConfig({ ...config, owner: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                className={inputClass}
                 placeholder="username or email"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Additional Query</label>
+              <label className={labelClass}>Additional Query</label>
               <input
                 type="text"
                 value={(config.query as string) || ''}
                 onChange={(e) => setConfig({ ...config, query: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                className={inputClass}
                 placeholder="project:openstack/octavia"
               />
             </div>
@@ -147,60 +149,57 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
 
         {widget.type === 'irc_recent_messages' && (
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Channel Name</label>
-            <div className="flex items-center">
-              <span className="text-slate-500 mr-1">#</span>
+            <label className={labelClass}>Channel</label>
+            <div className="flex items-center gap-1">
+              <span className="text-[#484f58] text-xs">#</span>
               <input
                 type="text"
                 value={(config.channel as string) || ''}
                 onChange={(e) => setConfig({ ...config, channel: e.target.value })}
-                className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                className={inputClass}
                 placeholder="openstack-lbaas"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-1">Channel name without the # prefix</p>
           </div>
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">Max Items</label>
+          <label className={labelClass}>Max Items</label>
           <input
             type="number"
             value={(config.limit as number) || 10}
             onChange={(e) => setConfig({ ...config, limit: parseInt(e.target.value) || 10 })}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+            className={inputClass}
             min={1}
             max={50}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1">
-            Refresh Interval (seconds)
-          </label>
+          <label className={labelClass}>Refresh Interval (seconds)</label>
           <input
             type="number"
             value={refreshInterval}
             onChange={(e) => setRefreshInterval(parseInt(e.target.value) || 300)}
-            className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+            className={inputClass}
             min={60}
             max={3600}
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-2 pt-2 border-t border-[#21262d]">
           <button
             onClick={closeWidgetEditor}
-            className="px-4 py-2 text-sm text-slate-400 hover:text-slate-200"
+            className="px-3 py-1.5 text-xs text-[#7d8590] hover:text-[#e6edf3] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={updateWidget.isPending}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="px-3 py-1.5 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-500 disabled:opacity-50 transition-colors font-medium"
           >
-            {updateWidget.isPending ? 'Saving...' : 'Save Changes'}
+            {updateWidget.isPending ? 'Saving...' : 'Save'}
           </button>
         </div>
       </div>

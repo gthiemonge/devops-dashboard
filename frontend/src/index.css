@@ -1,30 +1,97 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #3b82f6;
-  --color-secondary: #64748b;
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-tertiary: #334155;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --border-color: #334155;
+  /* SecOps/DevOps dark theme */
+  --color-cyan: #06b6d4;
+  --color-cyan-dim: #0891b2;
+  --color-green: #10b981;
+  --color-green-dim: #059669;
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+  --color-purple: #a855f7;
+
+  /* Backgrounds - very dark */
+  --bg-base: #0a0e14;
+  --bg-surface: #0d1117;
+  --bg-elevated: #161b22;
+  --bg-hover: #1c2128;
+
+  /* Text */
+  --text-primary: #e6edf3;
+  --text-secondary: #7d8590;
+  --text-muted: #484f58;
+
+  /* Borders */
+  --border-default: #21262d;
+  --border-muted: #30363d;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-muted) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-muted);
+  border-radius: 3px;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-base);
   color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
+/* Monospace for data */
+.font-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+/* Glow effects */
+.glow-cyan {
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+}
+
+.glow-red {
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
+}
+
+/* Status pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Grid layout styles */
 .react-grid-layout {
   margin: 0 !important;
+  background:
+    linear-gradient(90deg, var(--border-default) 1px, transparent 1px),
+    linear-gradient(var(--border-default) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: -1px -1px;
 }
 
 .react-grid-item {
@@ -32,9 +99,10 @@ body {
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: #3b82f6;
-  opacity: 0.3;
+  background: var(--color-cyan);
+  opacity: 0.2;
   border-radius: 0;
+  border: 1px dashed var(--color-cyan);
 }
 
 .react-grid-item > .react-resizable-handle {
@@ -46,10 +114,27 @@ body {
 .react-grid-item > .react-resizable-handle::after {
   content: "";
   position: absolute;
-  right: 3px;
-  bottom: 3px;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid rgba(255, 255, 255, 0.3);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  right: 4px;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--color-cyan);
+  border-bottom: 2px solid var(--color-cyan);
+  opacity: 0.5;
+}
+
+.react-grid-item:hover > .react-resizable-handle::after {
+  opacity: 1;
+}
+
+/* Widget transitions */
+.widget-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.widget-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 200ms, transform 200ms;
 }

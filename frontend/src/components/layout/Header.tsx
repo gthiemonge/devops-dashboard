@@ -2,26 +2,55 @@ import { useDashboardStore } from '../../store/dashboardStore';
 import { DashboardTabs } from '../dashboard/DashboardTabs';
 
 export function Header() {
-  const { openSettings, openWidgetPicker } = useDashboardStore();
+  const { openSettings, openWidgetPicker, widgets } = useDashboardStore();
+
+  // Calculate some stats
+  const widgetCount = widgets.length;
 
   return (
-    <header className="bg-slate-900 border-b border-slate-700">
+    <header className="bg-[#0d1117] border-b border-[#21262d]">
+      {/* Top bar */}
       <div className="px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-base font-semibold text-slate-100">
-            Dashboard
-          </h1>
+        <div className="flex items-center gap-3">
+          {/* Logo/Brand */}
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-[#e6edf3] tracking-tight">
+                DevOps Dashboard
+              </h1>
+              <p className="text-[10px] text-[#7d8590] font-mono uppercase tracking-wider">
+                OpenStack CI/CD
+              </p>
+            </div>
+          </div>
+
+          {/* Status indicator */}
+          <div className="hidden sm:flex items-center gap-2 ml-4 px-3 py-1 rounded-full bg-[#161b22] border border-[#21262d]">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 pulse-dot"></span>
+            <span className="text-xs text-[#7d8590] font-mono">
+              {widgetCount} active
+            </span>
+          </div>
         </div>
+
         <div className="flex items-center gap-2">
           <button
             onClick={openWidgetPicker}
-            className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-xs font-medium transition-colors"
           >
-            + Add Widget
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add Widget
           </button>
           <button
             onClick={openSettings}
-            className="p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
             title="Settings"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -30,7 +59,9 @@ export function Header() {
           </button>
         </div>
       </div>
-      <div className="px-4 pb-0">
+
+      {/* Tabs bar */}
+      <div className="px-4 border-t border-[#21262d]">
         <DashboardTabs />
       </div>
     </header>

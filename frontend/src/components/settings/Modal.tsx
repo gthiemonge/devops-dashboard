@@ -26,23 +26,29 @@ export function Modal({ title, children, onClose, width = 'md' }: ModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/70"
+        className="absolute inset-0 bg-[#0a0e14]/90 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className={`relative bg-slate-800 border border-slate-700 rounded-lg shadow-xl ${widthClasses[width]} w-full mx-4`}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
+
+      {/* Modal */}
+      <div className={`relative bg-[#0d1117] border border-[#30363d] rounded-lg shadow-2xl ${widthClasses[width]} w-full`}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262d]">
+          <h2 className="text-sm font-semibold text-[#e6edf3] font-mono uppercase tracking-wider">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1 text-[#484f58] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
+
+        {/* Content */}
         <div className="p-4">
           {children}
         </div>
