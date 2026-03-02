@@ -4,6 +4,7 @@ import { GerritRecentChanges } from '../widgets/GerritRecentChanges';
 import { GerritMyChanges } from '../widgets/GerritMyChanges';
 import { GerritUserChanges } from '../widgets/GerritUserChanges';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
+import { IrcRecentMessages } from '../widgets/IrcRecentMessages';
 import type { Widget, WidgetConfig, WidgetType } from '@dashboard/shared';
 
 function formatProjects(projectInput: string | undefined): string {
@@ -70,6 +71,7 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const owner = config.owner as string;
   const pipeline = config.pipeline as string;
   const branch = config.branch as string;
+  const channel = config.channel as string;
   const shortProject = formatProjects(project);
 
   switch (type) {
@@ -88,6 +90,8 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
       const parts = [pipeline || 'periodic', shortProject].filter(Boolean);
       return `Zuul: ${parts.join(' / ')}`;
     }
+    case 'irc_recent_messages':
+      return channel ? `IRC: #${channel}` : 'IRC Messages';
     default:
       return 'Widget';
   }
@@ -119,6 +123,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
         return <GerritUserChanges widget={widget} />;
       case 'zuul_periodic_jobs':
         return <ZuulPeriodicJobs widget={widget} />;
+      case 'irc_recent_messages':
+        return <IrcRecentMessages widget={widget} />;
       default:
         return <div className="text-slate-500">Unknown widget type</div>;
     }

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database.js';
-import { GerritProvider, ZuulProvider } from '../providers/index.js';
+import { GerritProvider, ZuulProvider, IrcProvider } from '../providers/index.js';
 import { cacheService } from '../services/cache.service.js';
-import type { ApiResponse, GerritChange, ZuulBuild } from '@dashboard/shared';
+import type { ApiResponse, GerritChange, ZuulBuild, IrcMessage } from '@dashboard/shared';
 
 export const proxyRouter = Router();
 
@@ -82,6 +82,49 @@ proxyRouter.get('/zuul/builds', async (req: Request, res: Response) => {
     );
 
     const response: ApiResponse<ZuulBuild[]> = { success: true, data: builds };
+    res.json(response);
+  } catch (err) {
+    const response: ApiResponse<null> = { success: false, error: (err as Error).message };
+    res.status(500).json(response);
+  }
+});
+
+proxyRouter.get('/irc/messages', async (req: Request, res: Response) => {
+  try {
+    const dataSourceId = parseInt(req.query.dataSourceId as string) || 3;
+    const channel = req.query.channel as string;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (!channel) {
+      const response: ApiResponse<null> = { success: false, error: 'Channel parameter is required' };
+      res.status(400).json(response);
+      return;
+    }
+
+    const dataSource = getDataSource(dataSourceId);
+    if (!dataSource || dataSource.type !== 'irc') {
+      const response: ApiResponse<null> = { success: false, error: 'IRC data source not found' };
+      res.status(404).json(response);
+      return;
+    }
+
+    const provider = new IrcProvider({ baseUrl: dataSource.base_url });
+
+    // Use longer cache for IRC (messages don't change once posted)
+    // Cache key includes date so today's cache expires normally
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `irc:messages:${dataSourceId}:${channel}:${limit}:${today}`;
+
+    const result = await cacheService.getOrSet<{ messages: IrcMessage[]; dates: string[] }>(
+      cacheKey,
+      () => provider.getMessages(channel, limit),
+      300 // 5 minutes cache for current day
+    );
+
+    const response: ApiResponse<{ messages: IrcMessage[]; dates: string[] }> = {
+      success: true,
+      data: result,
+    };
     res.json(response);
   } catch (err) {
     const response: ApiResponse<null> = { success: false, error: (err as Error).message };

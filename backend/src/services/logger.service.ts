@@ -14,7 +14,7 @@ const logFile = join(logsDir, 'api-calls.log');
 
 export interface ApiCallLog {
   timestamp: string;
-  service: 'gerrit' | 'zuul';
+  service: 'gerrit' | 'zuul' | 'irc';
   method: string;
   url: string;
   duration: number;

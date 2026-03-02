@@ -13,6 +13,7 @@ import type {
   UpdateLayoutDto,
   GerritChange,
   ZuulBuild,
+  IrcMessage,
   DashboardSummary,
 } from '@dashboard/shared';
 
@@ -91,6 +92,13 @@ export const proxyApi = {
     if (params.result) searchParams.append('result', params.result);
     if (params.limit) searchParams.append('limit', params.limit.toString());
     return request<ZuulBuild[]>(`/proxy/zuul/builds?${searchParams.toString()}`);
+  },
+  getIrcMessages: (params: { dataSourceId?: number; channel: string; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
+    searchParams.append('channel', params.channel);
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    return request<{ messages: IrcMessage[]; dates: string[] }>(`/proxy/irc/messages?${searchParams.toString()}`);
   },
 };
 

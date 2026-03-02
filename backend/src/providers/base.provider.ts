@@ -8,7 +8,7 @@ export interface ProviderConfig {
 
 export abstract class BaseProvider {
   protected config: ProviderConfig;
-  protected abstract serviceName: 'gerrit' | 'zuul';
+  protected abstract serviceName: 'gerrit' | 'zuul' | 'irc';
 
   constructor(config: ProviderConfig) {
     this.config = config;

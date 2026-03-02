@@ -1,5 +1,5 @@
 // Data Source Types
-export type DataSourceType = 'gerrit' | 'zuul' | 'github' | 'jira' | 'launchpad';
+export type DataSourceType = 'gerrit' | 'zuul' | 'irc' | 'github' | 'jira' | 'launchpad';
 
 export interface DataSource {
   id: number;
@@ -20,7 +20,7 @@ export interface Credential {
 }
 
 // Widget Types
-export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'zuul_periodic_jobs';
+export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'zuul_periodic_jobs' | 'irc_recent_messages';
 
 export interface Widget {
   id: number;
@@ -38,6 +38,7 @@ export interface WidgetConfig {
   query?: string;
   pipeline?: string;
   branch?: string;
+  channel?: string;
   limit?: number;
   [key: string]: unknown;
 }
@@ -119,6 +120,24 @@ export interface ZuulBuild {
   log_url: string;
   event_id: string;
   ref: ZuulBuildRef;
+}
+
+// IRC Types
+export interface IrcMessage {
+  id: string;
+  timestamp: string;
+  time: string;
+  nick: string;
+  message: string;
+  color: string;
+  type: 'message' | 'action' | 'nickchange' | 'join' | 'part';
+  date: string;
+}
+
+export interface IrcLogResponse {
+  channel: string;
+  messages: IrcMessage[];
+  dates: string[];
 }
 
 // API Response Types

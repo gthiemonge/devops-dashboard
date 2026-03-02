@@ -8,7 +8,7 @@ interface WidgetTypeOption {
   type: WidgetType;
   name: string;
   description: string;
-  sourceType: 'gerrit' | 'zuul';
+  sourceType: 'gerrit' | 'zuul' | 'irc';
   defaultConfig: Record<string, unknown>;
 }
 
@@ -41,11 +41,19 @@ const widgetTypes: WidgetTypeOption[] = [
     sourceType: 'zuul',
     defaultConfig: { project: 'openstack/octavia', pipeline: 'periodic', limit: 10 },
   },
+  {
+    type: 'irc_recent_messages',
+    name: 'IRC Recent Messages',
+    description: 'Shows recent IRC messages from a channel',
+    sourceType: 'irc',
+    defaultConfig: { channel: 'openstack-lbaas', limit: 20 },
+  },
 ];
 
 function generateTitle(type: WidgetType, config: Record<string, unknown>): string {
   const project = config.project as string;
   const owner = config.owner as string;
+  const channel = config.channel as string;
   const shortProject = project?.replace('openstack/', '') || '';
 
   switch (type) {
@@ -57,6 +65,8 @@ function generateTitle(type: WidgetType, config: Record<string, unknown>): strin
       return owner ? `Changes: ${owner}` : "User's Changes";
     case 'zuul_periodic_jobs':
       return shortProject ? `Zuul: ${shortProject}` : 'Zuul Periodic';
+    case 'irc_recent_messages':
+      return channel ? `IRC: #${channel}` : 'IRC Messages';
     default:
       return 'Widget';
   }
@@ -181,6 +191,23 @@ export function WidgetPicker() {
                 />
               </div>
             </>
+          )}
+
+          {selectedType.type === 'irc_recent_messages' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Channel Name</label>
+              <div className="flex items-center">
+                <span className="text-slate-500 mr-1">#</span>
+                <input
+                  type="text"
+                  value={(config.channel as string) || ''}
+                  onChange={(e) => setConfig({ ...config, channel: e.target.value })}
+                  className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  placeholder="openstack-lbaas"
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Channel name without the # prefix</p>
+            </div>
           )}
 
           <div>

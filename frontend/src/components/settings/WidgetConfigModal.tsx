@@ -145,6 +145,23 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
           </>
         )}
 
+        {widget.type === 'irc_recent_messages' && (
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-1">Channel Name</label>
+            <div className="flex items-center">
+              <span className="text-slate-500 mr-1">#</span>
+              <input
+                type="text"
+                value={(config.channel as string) || ''}
+                onChange={(e) => setConfig({ ...config, channel: e.target.value })}
+                className="flex-1 px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="openstack-lbaas"
+              />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Channel name without the # prefix</p>
+          </div>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1">Max Items</label>
           <input
