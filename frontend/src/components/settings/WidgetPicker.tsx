@@ -43,17 +43,34 @@ const widgetTypes: WidgetTypeOption[] = [
   },
 ];
 
+function generateTitle(type: WidgetType, config: Record<string, unknown>): string {
+  const project = config.project as string;
+  const owner = config.owner as string;
+  const shortProject = project?.replace('openstack/', '') || '';
+
+  switch (type) {
+    case 'gerrit_recent_changes':
+      return shortProject ? `Changes: ${shortProject}` : 'Recent Changes';
+    case 'gerrit_my_changes':
+      return 'My Changes';
+    case 'gerrit_user_changes':
+      return owner ? `Changes: ${owner}` : "User's Changes";
+    case 'zuul_periodic_jobs':
+      return shortProject ? `Zuul: ${shortProject}` : 'Zuul Periodic';
+    default:
+      return 'Widget';
+  }
+}
+
 export function WidgetPicker() {
   const { closeWidgetPicker, dataSources } = useDashboardStore();
   const createWidget = useCreateWidget();
   const [selectedType, setSelectedType] = useState<WidgetTypeOption | null>(null);
   const [config, setConfig] = useState<Record<string, unknown>>({});
-  const [title, setTitle] = useState('');
 
   const handleSelectType = (type: WidgetTypeOption) => {
     setSelectedType(type);
     setConfig(type.defaultConfig);
-    setTitle(type.name);
   };
 
   const handleCreate = () => {
@@ -67,7 +84,7 @@ export function WidgetPicker() {
 
     const dto: CreateWidgetDto = {
       type: selectedType.type,
-      title,
+      title: generateTitle(selectedType.type, config),
       dataSourceId: dataSource.id,
       config,
       refreshInterval: 300,
@@ -101,16 +118,6 @@ export function WidgetPicker() {
           >
             &larr; Back to widget types
           </button>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Title</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-            />
-          </div>
 
           {selectedType.type === 'gerrit_recent_changes' && (
             <div>
