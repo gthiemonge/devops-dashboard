@@ -60,11 +60,26 @@ function buildProjectQuery(projectInput: string): string {
   return `(${formatted.join(' OR ')})`;
 }
 
+function buildBranchQuery(branchInput: string): string {
+  if (!branchInput) return '';
+  const branch = branchInput.trim();
+  if (!branch) return '';
+  // Convert glob to regex for Gerrit
+  if (branch.includes('*')) {
+    const escaped = branch.replace(/[.+?{}()|[\]\\]/g, '\\$&');
+    const regex = escaped.replace(/\*/g, '.*');
+    return `branch:^${regex}`;
+  }
+  return `branch:${branch}`;
+}
+
 export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
   const projectInput = (widget.config.project as string) || 'openstack/octavia';
+  const branchInput = (widget.config.branch as string) || '';
   const limit = (widget.config.limit as number) || 10;
   const projectQuery = buildProjectQuery(projectInput);
-  const query = `${projectQuery} status:open`;
+  const branchQuery = buildBranchQuery(branchInput);
+  const query = [projectQuery, branchQuery, 'status:open'].filter(Boolean).join(' ');
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,

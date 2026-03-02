@@ -30,12 +30,24 @@ function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig): string
 
   if (type === 'gerrit_recent_changes') {
     const projectInput = (config.project as string) || '';
+    const branchInput = (config.branch as string) || '';
     const projects = projectInput.split(',').map(p => p.trim()).filter(Boolean);
     if (projects.length === 0) return null;
     const projectQuery = projects.length === 1
       ? `project:${toGerritProject(projects[0])}`
       : `(${projects.map(p => `project:${toGerritProject(p)}`).join('+OR+')})`;
-    return `${baseUrl}${projectQuery}+status:open`;
+    let branchQuery = '';
+    if (branchInput) {
+      const branch = branchInput.trim();
+      if (branch.includes('*')) {
+        const escaped = branch.replace(/[.+?{}()|[\]\\]/g, '\\$&');
+        const regex = escaped.replace(/\*/g, '.*');
+        branchQuery = `+branch:^${regex}`;
+      } else {
+        branchQuery = `+branch:${branch}`;
+      }
+    }
+    return `${baseUrl}${projectQuery}${branchQuery}+status:open`;
   }
 
   if (type === 'gerrit_user_changes') {
@@ -57,11 +69,17 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const project = config.project as string;
   const owner = config.owner as string;
   const pipeline = config.pipeline as string;
+  const branch = config.branch as string;
   const shortProject = formatProjects(project);
 
   switch (type) {
-    case 'gerrit_recent_changes':
-      return shortProject ? `Changes: ${shortProject}` : 'Recent Changes';
+    case 'gerrit_recent_changes': {
+      // Use "Backports" prefix if filtering by stable branches
+      const isBackports = branch && (branch.includes('stable') || branch.startsWith('stable'));
+      const prefix = isBackports ? 'Backports' : 'Changes';
+      const branchSuffix = branch && !isBackports ? ` (${branch})` : '';
+      return shortProject ? `${prefix}: ${shortProject}${branchSuffix}` : 'Recent Changes';
+    }
     case 'gerrit_my_changes':
       return 'My Changes';
     case 'gerrit_user_changes':

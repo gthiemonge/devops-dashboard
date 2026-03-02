@@ -56,17 +56,29 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
         </div>
 
         {widget.type === 'gerrit_recent_changes' && (
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Project(s)</label>
-            <input
-              type="text"
-              value={(config.project as string) || ''}
-              onChange={(e) => setConfig({ ...config, project: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-              placeholder="openstack/octavia, openstack/neutron or octavia*"
-            />
-            <p className="text-xs text-slate-500 mt-1">Comma-separated or wildcards (*)</p>
-          </div>
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Project(s)</label>
+              <input
+                type="text"
+                value={(config.project as string) || ''}
+                onChange={(e) => setConfig({ ...config, project: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="openstack/octavia, openstack/neutron or octavia*"
+              />
+              <p className="text-xs text-slate-500 mt-1">Comma-separated or wildcards (*)</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Branch (optional)</label>
+              <input
+                type="text"
+                value={(config.branch as string) || ''}
+                onChange={(e) => setConfig({ ...config, branch: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="stable/* for backports, master, etc."
+              />
+            </div>
+          </>
         )}
 
         {widget.type === 'zuul_periodic_jobs' && (
