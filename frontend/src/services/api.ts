@@ -4,6 +4,7 @@ import type {
   DashboardWithCounts,
   CreateDashboardDto,
   UpdateDashboardDto,
+  DashboardExport,
   DataSource,
   CreateDataSourceDto,
   UpdateDataSourceDto,
@@ -52,6 +53,10 @@ export const dashboardsApi = {
     request<null>(`/dashboards/${id}`, { method: 'DELETE' }),
   reorder: (order: number[]) =>
     request<Dashboard[]>('/dashboards/reorder', { method: 'POST', body: JSON.stringify({ order }) }),
+  export: (id: number) =>
+    request<DashboardExport>(`/dashboards/${id}/export`),
+  import: (data: DashboardExport) =>
+    request<Dashboard>('/dashboards/import', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 export const dataSourcesApi = {

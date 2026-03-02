@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { useCreateDashboard, useUpdateDashboard, useDeleteDashboard } from '../../hooks/useDashboards';
+import { dashboardsApi } from '../../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import type { DashboardExport } from '@dashboard/shared';
 
 export function DashboardTabs() {
   const {
@@ -60,6 +63,50 @@ export function DashboardTabs() {
     if (confirm('Delete this dashboard and all its widgets?')) {
       deleteDashboard.mutate(id);
     }
+  };
+
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = async () => {
+    if (!currentDashboardId) return;
+    try {
+      const data = await dashboardsApi.export(currentDashboardId);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dashboard-${data.dashboard.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`Export failed: ${(err as Error).message}`);
+    }
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data: DashboardExport = JSON.parse(text);
+      const newDashboard = await dashboardsApi.import(data);
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      queryClient.invalidateQueries({ queryKey: ['widgets'] });
+      setCurrentDashboard(newDashboard.id);
+    } catch (err) {
+      alert(`Import failed: ${(err as Error).message}`);
+    }
+
+    // Reset input
+    e.target.value = '';
   };
 
   return (
@@ -145,17 +192,52 @@ export function DashboardTabs() {
         );
       })}
 
-      {/* Add dashboard button */}
-      <button
-        onClick={handleAddDashboard}
-        disabled={createDashboard.isPending}
-        className="p-1.5 ml-1 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
-        title="Add dashboard"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-        </svg>
-      </button>
+      {/* Action buttons */}
+      <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-[#21262d]">
+        {/* Add dashboard */}
+        <button
+          onClick={handleAddDashboard}
+          disabled={createDashboard.isPending}
+          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
+          title="Add dashboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        {/* Export dashboard */}
+        <button
+          onClick={handleExport}
+          disabled={!currentDashboardId}
+          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors disabled:opacity-50"
+          title="Export current dashboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        {/* Import dashboard */}
+        <button
+          onClick={handleImport}
+          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
+          title="Import dashboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        {/* Hidden file input for import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </div>
     </div>
   );
 }

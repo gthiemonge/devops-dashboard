@@ -78,6 +78,30 @@ export interface DashboardWithCounts extends Dashboard {
   attentionCount: number;
 }
 
+// Dashboard Export/Import Types
+export interface ExportedWidget {
+  type: WidgetType;
+  title: string;
+  dataSourceType: DataSourceType;
+  config: WidgetConfig;
+  refreshInterval: number;
+  layout: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  };
+}
+
+export interface DashboardExport {
+  version: number;
+  exportedAt: string;
+  dashboard: {
+    name: string;
+  };
+  widgets: ExportedWidget[];
+}
+
 // Gerrit Types
 export interface GerritChange {
   id: string;
