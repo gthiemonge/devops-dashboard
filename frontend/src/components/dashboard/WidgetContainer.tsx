@@ -15,6 +15,44 @@ function formatProjects(projectInput: string | undefined): string {
   return `${projects[0]} +${projects.length - 1}`;
 }
 
+function toGerritProject(project: string): string {
+  if (project.startsWith('^')) return project;
+  if (project.includes('*')) {
+    const escaped = project.replace(/[.+?{}()|[\]\\]/g, '\\$&');
+    const regex = escaped.replace(/\*/g, '.*');
+    return `^${regex}`;
+  }
+  return project;
+}
+
+function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig): string | null {
+  const baseUrl = 'https://review.opendev.org/q/';
+
+  if (type === 'gerrit_recent_changes') {
+    const projectInput = (config.project as string) || '';
+    const projects = projectInput.split(',').map(p => p.trim()).filter(Boolean);
+    if (projects.length === 0) return null;
+    const projectQuery = projects.length === 1
+      ? `project:${toGerritProject(projects[0])}`
+      : `(${projects.map(p => `project:${toGerritProject(p)}`).join('+OR+')})`;
+    return `${baseUrl}${projectQuery}+status:open`;
+  }
+
+  if (type === 'gerrit_user_changes') {
+    const owner = config.owner as string;
+    if (!owner) return null;
+    const query = config.query as string;
+    const baseQuery = `owner:${owner}+status:open`;
+    return query ? `${baseUrl}${baseQuery}+${encodeURIComponent(query)}` : `${baseUrl}${baseQuery}`;
+  }
+
+  if (type === 'gerrit_my_changes') {
+    return `${baseUrl}owner:self+(label:Code-Review<0+OR+label:Verified<0)`;
+  }
+
+  return null;
+}
+
 function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const project = config.project as string;
   const owner = config.owner as string;
@@ -43,6 +81,7 @@ interface WidgetContainerProps {
 
 export function WidgetContainer({ widget }: WidgetContainerProps) {
   const title = generateTitle(widget.type, widget.config);
+  const searchUrl = generateGerritSearchUrl(widget.type, widget.config);
   const { editWidget } = useDashboardStore();
   const deleteWidget = useDeleteWidget();
 
@@ -70,7 +109,19 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
   return (
     <div className="bg-slate-800 border-r border-b border-slate-700 h-full flex flex-col overflow-hidden">
       <div className="widget-drag-handle flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 cursor-move">
-        <h3 className="font-medium text-slate-200 text-sm truncate">{title}</h3>
+        {searchUrl ? (
+          <a
+            href={searchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="font-medium text-slate-200 text-sm truncate hover:text-blue-400 transition-colors"
+          >
+            {title}
+          </a>
+        ) : (
+          <h3 className="font-medium text-slate-200 text-sm truncate">{title}</h3>
+        )}
         <div className="flex items-center gap-1">
           <button
             onClick={() => editWidget(widget.id)}
