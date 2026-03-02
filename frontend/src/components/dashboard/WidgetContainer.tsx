@@ -4,13 +4,33 @@ import { GerritRecentChanges } from '../widgets/GerritRecentChanges';
 import { GerritMyChanges } from '../widgets/GerritMyChanges';
 import { GerritUserChanges } from '../widgets/GerritUserChanges';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
-import type { Widget } from '@dashboard/shared';
+import type { Widget, WidgetConfig, WidgetType } from '@dashboard/shared';
+
+function generateTitle(type: WidgetType, config: WidgetConfig): string {
+  const project = config.project as string;
+  const owner = config.owner as string;
+  const shortProject = project?.replace('openstack/', '') || '';
+
+  switch (type) {
+    case 'gerrit_recent_changes':
+      return shortProject ? `Changes: ${shortProject}` : 'Recent Changes';
+    case 'gerrit_my_changes':
+      return 'My Changes';
+    case 'gerrit_user_changes':
+      return owner ? `Changes: ${owner}` : "User's Changes";
+    case 'zuul_periodic_jobs':
+      return shortProject ? `Zuul: ${shortProject}` : 'Zuul Periodic';
+    default:
+      return 'Widget';
+  }
+}
 
 interface WidgetContainerProps {
   widget: Widget;
 }
 
 export function WidgetContainer({ widget }: WidgetContainerProps) {
+  const title = generateTitle(widget.type, widget.config);
   const { editWidget } = useDashboardStore();
   const deleteWidget = useDeleteWidget();
 
@@ -38,7 +58,7 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
   return (
     <div className="bg-slate-800 border-r border-b border-slate-700 h-full flex flex-col overflow-hidden">
       <div className="widget-drag-handle flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 cursor-move">
-        <h3 className="font-medium text-slate-200 text-sm truncate">{widget.title}</h3>
+        <h3 className="font-medium text-slate-200 text-sm truncate">{title}</h3>
         <div className="flex items-center gap-1">
           <button
             onClick={() => editWidget(widget.id)}
