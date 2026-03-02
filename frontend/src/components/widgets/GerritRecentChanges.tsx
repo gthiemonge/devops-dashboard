@@ -106,10 +106,12 @@ function buildBranchQuery(branchInput: string): string {
 export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
   const projectInput = (widget.config.project as string) || 'openstack/octavia';
   const branchInput = (widget.config.branch as string) || '';
+  const messageFilter = (widget.config.message as string) || '';
   const limit = (widget.config.limit as number) || 10;
   const projectQuery = buildProjectQuery(projectInput);
   const branchQuery = buildBranchQuery(branchInput);
-  const query = [projectQuery, branchQuery, 'status:open'].filter(Boolean).join(' ');
+  const messageQuery = messageFilter ? `message:${messageFilter}` : '';
+  const query = [projectQuery, branchQuery, messageQuery, 'status:open'].filter(Boolean).join(' ');
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,

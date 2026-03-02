@@ -77,9 +77,12 @@ export function GerritUserChanges({ widget }: GerritUserChangesProps) {
   const owner = (widget.config.owner as string) || '';
   const limit = (widget.config.limit as number) || 10;
   const additionalQuery = (widget.config.query as string) || '';
+  const messageFilter = (widget.config.message as string) || '';
 
   const baseQuery = owner ? `owner:${owner} status:open` : 'status:open';
-  const query = additionalQuery ? `${baseQuery} ${additionalQuery}` : baseQuery;
+  const messageQuery = messageFilter ? `message:${messageFilter}` : '';
+  const queryParts = [baseQuery, messageQuery, additionalQuery].filter(Boolean);
+  const query = queryParts.join(' ');
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,

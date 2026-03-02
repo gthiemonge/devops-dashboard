@@ -22,7 +22,7 @@ const widgetTypes: WidgetTypeOption[] = [
     sourceType: 'gerrit',
     icon: 'gerrit',
     color: 'emerald',
-    defaultConfig: { project: 'openstack/octavia', limit: 10 },
+    defaultConfig: { project: 'openstack/octavia', limit: 10, message: '' },
   },
   {
     type: 'gerrit_my_changes',
@@ -40,7 +40,7 @@ const widgetTypes: WidgetTypeOption[] = [
     sourceType: 'gerrit',
     icon: 'gerrit',
     color: 'emerald',
-    defaultConfig: { owner: '', limit: 10 },
+    defaultConfig: { owner: '', limit: 10, message: '' },
   },
   {
     type: 'zuul_periodic_jobs',
@@ -179,20 +179,44 @@ export function WidgetPicker() {
                   placeholder="stable/* for backports"
                 />
               </div>
+              <div>
+                <label className={labelClass}>Message filter (optional)</label>
+                <input
+                  type="text"
+                  value={(config.message as string) || ''}
+                  onChange={(e) => setConfig({ ...config, message: e.target.value })}
+                  className={inputClass}
+                  placeholder="DNM, WIP, fix bug"
+                />
+                <p className="text-[10px] text-[#484f58] mt-1">Full-text search in commit message</p>
+              </div>
             </>
           )}
 
           {selectedType.type === 'gerrit_user_changes' && (
-            <div>
-              <label className={labelClass}>Username</label>
-              <input
-                type="text"
-                value={(config.owner as string) || ''}
-                onChange={(e) => setConfig({ ...config, owner: e.target.value })}
-                className={inputClass}
-                placeholder="username or email"
-              />
-            </div>
+            <>
+              <div>
+                <label className={labelClass}>Username</label>
+                <input
+                  type="text"
+                  value={(config.owner as string) || ''}
+                  onChange={(e) => setConfig({ ...config, owner: e.target.value })}
+                  className={inputClass}
+                  placeholder="username or email"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Message filter (optional)</label>
+                <input
+                  type="text"
+                  value={(config.message as string) || ''}
+                  onChange={(e) => setConfig({ ...config, message: e.target.value })}
+                  className={inputClass}
+                  placeholder="DNM, WIP, fix bug"
+                />
+                <p className="text-[10px] text-[#484f58] mt-1">Full-text search in commit message</p>
+              </div>
+            </>
           )}
 
           {selectedType.type === 'zuul_periodic_jobs' && (
