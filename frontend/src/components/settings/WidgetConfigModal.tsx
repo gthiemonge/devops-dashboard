@@ -94,6 +94,31 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
           </div>
         )}
 
+        {widget.type === 'gerrit_user_changes' && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+              <input
+                type="text"
+                value={(config.owner as string) || ''}
+                onChange={(e) => setConfig({ ...config, owner: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="username or email"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Additional Query</label>
+              <input
+                type="text"
+                value={(config.query as string) || ''}
+                onChange={(e) => setConfig({ ...config, query: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="project:openstack/octavia"
+              />
+            </div>
+          </>
+        )}
+
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1">Max Items</label>
           <input

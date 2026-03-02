@@ -2,6 +2,7 @@ import { useDashboardStore } from '../../store/dashboardStore';
 import { useDeleteWidget } from '../../hooks/useWidgets';
 import { GerritRecentChanges } from '../widgets/GerritRecentChanges';
 import { GerritMyChanges } from '../widgets/GerritMyChanges';
+import { GerritUserChanges } from '../widgets/GerritUserChanges';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
 import type { Widget } from '@dashboard/shared';
 
@@ -25,6 +26,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
         return <GerritRecentChanges widget={widget} />;
       case 'gerrit_my_changes':
         return <GerritMyChanges widget={widget} />;
+      case 'gerrit_user_changes':
+        return <GerritUserChanges widget={widget} />;
       case 'zuul_periodic_jobs':
         return <ZuulPeriodicJobs widget={widget} />;
       default:

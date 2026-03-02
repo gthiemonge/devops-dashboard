@@ -23,9 +23,16 @@ const widgetTypes: WidgetTypeOption[] = [
   {
     type: 'gerrit_my_changes',
     name: 'My Gerrit Changes',
-    description: 'Shows your changes that need attention',
+    description: 'Shows your changes that need attention (requires auth)',
     sourceType: 'gerrit',
     defaultConfig: { limit: 10 },
+  },
+  {
+    type: 'gerrit_user_changes',
+    name: "User's Gerrit Changes",
+    description: "Shows another user's open changes (no auth required)",
+    sourceType: 'gerrit',
+    defaultConfig: { owner: '', limit: 10 },
   },
   {
     type: 'zuul_periodic_jobs',
@@ -114,6 +121,19 @@ export function WidgetPicker() {
                 onChange={(e) => setConfig({ ...config, project: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
                 placeholder="openstack/octavia"
+              />
+            </div>
+          )}
+
+          {selectedType.type === 'gerrit_user_changes' && (
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">Username</label>
+              <input
+                type="text"
+                value={(config.owner as string) || ''}
+                onChange={(e) => setConfig({ ...config, owner: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-600 rounded-md text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                placeholder="username or email"
               />
             </div>
           )}
