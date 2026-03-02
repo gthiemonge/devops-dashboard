@@ -76,14 +76,12 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
             <p className="text-sm text-slate-200 truncate">
               {change.subject}
             </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-red-400">
-                {getAttentionReason(change)}
-              </span>
-              <span className="text-xs text-slate-600">·</span>
-              <span className="text-xs text-slate-500">
-                {formatDate(change.updated)}
-              </span>
+            <div className="flex items-center gap-2 mt-0.5 text-xs">
+              <span className="text-slate-400">{change.project.replace('openstack/', '')}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-red-400">{getAttentionReason(change)}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-500">{formatDate(change.updated)}</span>
             </div>
           </div>
         </a>

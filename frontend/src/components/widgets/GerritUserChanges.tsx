@@ -87,7 +87,8 @@ export function GerritUserChanges({ widget }: GerritUserChangesProps) {
                 {change.subject}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                {change.project.replace('openstack/', '')} · {formatDate(change.updated)}
+                <span className="text-slate-400">{change.project.replace('openstack/', '')}</span>
+                {' · '}{formatDate(change.updated)}
               </p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">

@@ -101,7 +101,8 @@ export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
                 {change.subject}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
-                {change.owner.name || change.owner.username} · {formatDate(change.updated)}
+                <span className="text-slate-400">{change.project.replace('openstack/', '')}</span>
+                {' · '}{change.owner.name || change.owner.username} · {formatDate(change.updated)}
               </p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
