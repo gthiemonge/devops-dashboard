@@ -18,27 +18,59 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function getLabelBadge(change: GerritChange, labelName: string): JSX.Element | null {
+function getLabelBadges(change: GerritChange, labelName: string): JSX.Element[] {
   const label = change.labels?.[labelName];
-  if (!label) return null;
+  if (!label) return [];
 
-  const shortName = labelName === 'Code-Review' ? 'CR' : 'V';
+  const shortName = labelName === 'Code-Review' ? 'CR' : labelName === 'Verified' ? 'V' : 'W';
+  const badges: JSX.Element[] = [];
 
-  if (label.approved || (label.value !== undefined && label.value > 0)) {
-    return (
-      <span className="px-1 py-0.5 text-[10px] font-mono font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-        {shortName}+
+  // Extract unique vote values from the 'all' array
+  const voteValues = new Set<number>();
+  if (label.all && label.all.length > 0) {
+    label.all.forEach((vote) => {
+      if (typeof vote.value === 'number' && vote.value !== 0) {
+        voteValues.add(vote.value);
+      }
+    });
+  }
+
+  // Fallback to other fields if no votes found in 'all'
+  if (voteValues.size === 0) {
+    if (typeof label.value === 'number' && label.value !== 0) {
+      voteValues.add(label.value);
+    } else if (label.approved) {
+      voteValues.add(labelName === 'Code-Review' ? 2 : 1);
+    } else if (label.rejected) {
+      voteValues.add(labelName === 'Code-Review' ? -2 : -1);
+    }
+  }
+
+  // Sort votes: positive descending, then negative ascending
+  const sortedVotes = Array.from(voteValues).sort((a, b) => {
+    if (a > 0 && b > 0) return b - a;
+    if (a < 0 && b < 0) return a - b;
+    return b - a;
+  });
+
+  sortedVotes.forEach((value, idx) => {
+    const isPositive = value > 0;
+    const valueStr = value > 0 ? `+${value}` : `${value}`;
+    badges.push(
+      <span
+        key={`${labelName}-${idx}`}
+        className={`px-1 py-0.5 text-[10px] font-mono font-bold rounded border ${
+          isPositive
+            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+            : 'bg-red-500/20 text-red-400 border-red-500/30'
+        }`}
+      >
+        {shortName}{valueStr}
       </span>
     );
-  }
-  if (label.rejected || (label.value !== undefined && label.value < 0)) {
-    return (
-      <span className="px-1 py-0.5 text-[10px] font-mono font-bold rounded bg-red-500/20 text-red-400 border border-red-500/30">
-        {shortName}-
-      </span>
-    );
-  }
-  return null;
+  });
+
+  return badges;
 }
 
 export function GerritUserChanges({ widget }: GerritUserChangesProps) {
@@ -112,8 +144,9 @@ export function GerritUserChanges({ widget }: GerritUserChangesProps) {
               </div>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-              {getLabelBadge(change, 'Code-Review')}
-              {getLabelBadge(change, 'Verified')}
+              {getLabelBadges(change, 'Code-Review')}
+              {getLabelBadges(change, 'Verified')}
+              {getLabelBadges(change, 'Workflow')}
             </div>
           </div>
         </a>

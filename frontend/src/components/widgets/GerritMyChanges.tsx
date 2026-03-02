@@ -18,16 +18,57 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function getAttentionReason(change: GerritChange): { text: string; color: string } {
+function getAttentionBadges(change: GerritChange): JSX.Element[] {
   const labels = change.labels || {};
+  const badges: JSX.Element[] = [];
 
-  if (labels['Verified']?.rejected || (labels['Verified']?.value !== undefined && labels['Verified'].value < 0)) {
-    return { text: 'V-', color: 'text-red-400' };
-  }
-  if (labels['Code-Review']?.rejected || (labels['Code-Review']?.value !== undefined && labels['Code-Review'].value < 0)) {
-    return { text: 'CR-', color: 'text-amber-400' };
-  }
-  return { text: 'ATTN', color: 'text-amber-400' };
+  const addBadge = (labelName: string, shortName: string) => {
+    const label = labels[labelName];
+    if (!label) return;
+
+    // Extract negative vote values
+    const negativeVotes = new Set<number>();
+    if (label.all && label.all.length > 0) {
+      label.all.forEach((vote) => {
+        if (typeof vote.value === 'number' && vote.value < 0) {
+          negativeVotes.add(vote.value);
+        }
+      });
+    }
+
+    // Fallback to other fields if no negative votes found in 'all'
+    if (negativeVotes.size === 0) {
+      if (typeof label.value === 'number' && label.value < 0) {
+        negativeVotes.add(label.value);
+      } else if (label.rejected) {
+        negativeVotes.add(labelName === 'Code-Review' ? -2 : -1);
+      }
+    }
+
+    // Sort by most negative first
+    const sortedVotes = Array.from(negativeVotes).sort((a, b) => a - b);
+
+    sortedVotes.forEach((value, idx) => {
+      badges.push(
+        <span
+          key={`${labelName}-${idx}`}
+          className="px-1 py-0.5 text-[10px] font-mono font-bold rounded bg-red-500/20 text-red-400 border border-red-500/30"
+        >
+          {shortName}{value}
+        </span>
+      );
+    });
+  };
+
+  addBadge('Code-Review', 'CR');
+  addBadge('Verified', 'V');
+  addBadge('Workflow', 'W');
+
+  return badges.length > 0 ? badges : [
+    <span key="attn" className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">
+      ATTN
+    </span>
+  ];
 }
 
 export function GerritMyChanges({ widget }: GerritMyChangesProps) {
@@ -74,7 +115,7 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
   return (
     <div className="space-y-0.5">
       {changes.map((change: GerritChange) => {
-        const reason = getAttentionReason(change);
+        const badges = getAttentionBadges(change);
         return (
           <a
             key={change.id}
@@ -98,9 +139,9 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
                   </span>
                 </div>
               </div>
-              <span className={`px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-red-500/20 border border-red-500/30 ${reason.color}`}>
-                {reason.text}
-              </span>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {badges}
+              </div>
             </div>
           </a>
         );
