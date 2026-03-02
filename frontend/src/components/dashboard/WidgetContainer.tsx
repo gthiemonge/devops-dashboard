@@ -18,6 +18,7 @@ function formatProjects(projectInput: string | undefined): string {
 function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const project = config.project as string;
   const owner = config.owner as string;
+  const pipeline = config.pipeline as string;
   const shortProject = formatProjects(project);
 
   switch (type) {
@@ -27,8 +28,10 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
       return 'My Changes';
     case 'gerrit_user_changes':
       return owner ? `Changes: ${owner}` : "User's Changes";
-    case 'zuul_periodic_jobs':
-      return shortProject ? `Zuul: ${shortProject}` : 'Zuul Periodic';
+    case 'zuul_periodic_jobs': {
+      const parts = [pipeline || 'periodic', shortProject].filter(Boolean);
+      return `Zuul: ${parts.join(' / ')}`;
+    }
     default:
       return 'Widget';
   }
