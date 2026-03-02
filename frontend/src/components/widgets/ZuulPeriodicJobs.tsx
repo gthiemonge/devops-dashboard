@@ -31,22 +31,34 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const project = widget.config.project as string;
   const pipeline = (widget.config.pipeline as string) || 'periodic';
   const limit = (widget.config.limit as number) || 10;
+  const days = (widget.config.days as number) || 7;
   const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
 
-  const { data: builds, isLoading, error } = useZuulBuilds({
+  const { data: rawBuilds, isLoading, error } = useZuulBuilds({
     dataSourceId: widget.dataSourceId,
     project,
     pipeline,
     result: 'FAILURE',
-    limit,
+    limit: limit * 3, // Fetch more to account for date filtering
     refreshInterval: widget.refreshInterval,
   });
 
-  // Report issue count (failed builds)
+  // Filter builds by date and limit
+  const builds = rawBuilds
+    ? rawBuilds
+        .filter((build) => {
+          const buildDate = new Date(build.end_time);
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - days);
+          return buildDate >= cutoffDate;
+        })
+        .slice(0, limit)
+    : [];
+
+  // Report issue count (failed builds within date range)
   useEffect(() => {
-    const count = builds?.length || 0;
-    setWidgetIssueCount(widget.id, count);
-  }, [builds, widget.id, setWidgetIssueCount]);
+    setWidgetIssueCount(widget.id, builds.length);
+  }, [builds.length, widget.id, setWidgetIssueCount]);
 
   if (isLoading) {
     return (

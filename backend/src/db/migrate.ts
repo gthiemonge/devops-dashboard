@@ -69,6 +69,24 @@ try {
   db.exec("CREATE INDEX IF NOT EXISTS idx_dashboards_position ON dashboards(position);");
   console.log('   Done.');
 
+  // 6. Add days default to Zuul widgets
+  console.log('6. Adding days default to Zuul widgets...');
+  const zuulWidgets = db.prepare("SELECT id, config FROM widgets WHERE type = 'zuul_periodic_jobs'").all() as { id: number; config: string }[];
+  let updatedCount = 0;
+  for (const widget of zuulWidgets) {
+    try {
+      const config = JSON.parse(widget.config);
+      if (config.days === undefined) {
+        config.days = 7;
+        db.prepare("UPDATE widgets SET config = ? WHERE id = ?").run(JSON.stringify(config), widget.id);
+        updatedCount++;
+      }
+    } catch {
+      console.log(`   Warning: Could not parse config for widget ${widget.id}`);
+    }
+  }
+  console.log(`   Updated ${updatedCount} Zuul widget(s) with days=7 default.`);
+
   console.log('\n✓ Migration completed successfully!');
   console.log('  Your existing widgets and layout have been preserved.');
   console.log('  All widgets are now in the "Main" dashboard.');

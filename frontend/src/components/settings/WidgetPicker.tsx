@@ -49,7 +49,7 @@ const widgetTypes: WidgetTypeOption[] = [
     sourceType: 'zuul',
     icon: 'zuul',
     color: 'amber',
-    defaultConfig: { project: 'openstack/octavia', pipeline: 'periodic', limit: 10 },
+    defaultConfig: { project: 'openstack/octavia', pipeline: 'periodic', limit: 10, days: 7 },
   },
   {
     type: 'irc_recent_messages',
@@ -216,6 +216,18 @@ export function WidgetPicker() {
                   className={inputClass}
                   placeholder="periodic"
                 />
+              </div>
+              <div>
+                <label className={labelClass}>Days to look back</label>
+                <input
+                  type="number"
+                  value={(config.days as number) || 7}
+                  onChange={(e) => setConfig({ ...config, days: parseInt(e.target.value) || 7 })}
+                  className={inputClass}
+                  min={1}
+                  max={90}
+                />
+                <p className="text-[10px] text-[#484f58] mt-1">Only show failures from the last N days</p>
               </div>
             </>
           )}
