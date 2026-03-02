@@ -6,10 +6,19 @@ import { GerritUserChanges } from '../widgets/GerritUserChanges';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
 import type { Widget, WidgetConfig, WidgetType } from '@dashboard/shared';
 
+function formatProjects(projectInput: string | undefined): string {
+  if (!projectInput) return '';
+  const projects = projectInput.split(',').map(p => p.trim().replace('openstack/', '')).filter(Boolean);
+  if (projects.length === 0) return '';
+  if (projects.length === 1) return projects[0];
+  if (projects.length === 2) return projects.join(', ');
+  return `${projects[0]} +${projects.length - 1}`;
+}
+
 function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const project = config.project as string;
   const owner = config.owner as string;
-  const shortProject = project?.replace('openstack/', '') || '';
+  const shortProject = formatProjects(project);
 
   switch (type) {
     case 'gerrit_recent_changes':

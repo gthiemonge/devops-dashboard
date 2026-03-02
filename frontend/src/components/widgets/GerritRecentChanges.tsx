@@ -39,10 +39,18 @@ function getLabelBadge(change: GerritChange, labelName: string): JSX.Element | n
   return null;
 }
 
+function buildProjectQuery(projectInput: string): string {
+  const projects = projectInput.split(',').map(p => p.trim()).filter(Boolean);
+  if (projects.length === 0) return '';
+  if (projects.length === 1) return `project:${projects[0]}`;
+  return `(${projects.map(p => `project:${p}`).join(' OR ')})`;
+}
+
 export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
-  const project = (widget.config.project as string) || 'openstack/octavia';
+  const projectInput = (widget.config.project as string) || 'openstack/octavia';
   const limit = (widget.config.limit as number) || 10;
-  const query = `project:${project} status:open`;
+  const projectQuery = buildProjectQuery(projectInput);
+  const query = `${projectQuery} status:open`;
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,
