@@ -71,7 +71,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => editWidget(widget.id)}
-            className="p-1 text-slate-500 hover:text-slate-300 transition-colors"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
             title="Configure"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -80,7 +81,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
           </button>
           <button
             onClick={handleDelete}
-            className="p-1 text-slate-500 hover:text-red-400 transition-colors"
+            onMouseDown={(e) => e.stopPropagation()}
+            className="p-1 text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
             title="Delete"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
