@@ -81,7 +81,7 @@ INSERT OR IGNORE INTO data_sources (name, type, base_url) VALUES
 INSERT OR IGNORE INTO widget_types (name, display_name, description, supported_source_types, default_config) VALUES
     ('gerrit_recent_changes', 'Recent Gerrit Changes', 'Shows recent changes for a project', '["gerrit"]', '{"project": "openstack/octavia", "limit": 10}'),
     ('gerrit_my_changes', 'My Gerrit Changes', 'Shows your changes needing attention', '["gerrit"]', '{"limit": 10}'),
-    ('gerrit_user_changes', "User's Gerrit Changes", "Shows another user's open changes", '["gerrit"]', '{"owner": "", "limit": 10}'),
+    ('gerrit_user_changes', 'User''s Gerrit Changes', 'Shows another user''s open changes', '["gerrit"]', '{"owner": "", "limit": 10}'),
     ('zuul_periodic_jobs', 'Failed Periodic Jobs', 'Shows failed periodic Zuul jobs', '["zuul"]', '{"project": "openstack/octavia", "pipeline": "periodic", "limit": 10}'),
     ('irc_recent_messages', 'IRC Recent Messages', 'Shows recent IRC messages from a channel', '["irc"]', '{"channel": "openstack-lbaas", "limit": 20}');
 
