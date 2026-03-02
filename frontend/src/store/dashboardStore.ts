@@ -11,6 +11,9 @@ interface DashboardState {
   layout: LayoutItem[];
   dataSources: DataSource[];
 
+  // Issue tracking per widget
+  widgetIssueCounts: Record<number, number>;
+
   // UI state
   isSettingsOpen: boolean;
   isWidgetPickerOpen: boolean;
@@ -39,6 +42,10 @@ interface DashboardState {
   // Data source actions
   setDataSources: (dataSources: DataSource[]) => void;
 
+  // Issue tracking actions
+  setWidgetIssueCount: (widgetId: number, count: number) => void;
+  getIssueCountForDashboard: (dashboardId: number) => number;
+
   // UI actions
   openSettings: () => void;
   closeSettings: () => void;
@@ -54,6 +61,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   widgets: [],
   layout: [],
   dataSources: [],
+  widgetIssueCounts: {},
   isSettingsOpen: false,
   isWidgetPickerOpen: false,
   editingWidgetId: null,
@@ -143,6 +151,22 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   // Data source actions
   setDataSources: (dataSources) => set({ dataSources }),
+
+  // Issue tracking actions
+  setWidgetIssueCount: (widgetId, count) =>
+    set((state) => ({
+      widgetIssueCounts: { ...state.widgetIssueCounts, [widgetId]: count },
+    })),
+
+  getIssueCountForDashboard: (dashboardId) => {
+    const state = get();
+    // Get all widgets for this dashboard and sum their issue counts
+    // Note: widgets in state are only for current dashboard, so we need to check dashboardId
+    const widgetIds = state.widgets
+      .filter((w) => w.dashboardId === dashboardId)
+      .map((w) => w.id);
+    return widgetIds.reduce((sum, id) => sum + (state.widgetIssueCounts[id] || 0), 0);
+  },
 
   // UI actions
   openSettings: () => set({ isSettingsOpen: true }),

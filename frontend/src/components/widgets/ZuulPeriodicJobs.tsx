@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useZuulBuilds } from '../../hooks/useZuulBuilds';
+import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, ZuulBuild } from '@dashboard/shared';
 
 interface ZuulPeriodicJobsProps {
@@ -29,6 +31,7 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const project = widget.config.project as string;
   const pipeline = (widget.config.pipeline as string) || 'periodic';
   const limit = (widget.config.limit as number) || 10;
+  const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
 
   const { data: builds, isLoading, error } = useZuulBuilds({
     dataSourceId: widget.dataSourceId,
@@ -38,6 +41,12 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
     limit,
     refreshInterval: widget.refreshInterval,
   });
+
+  // Report issue count (failed builds)
+  useEffect(() => {
+    const count = builds?.length || 0;
+    setWidgetIssueCount(widget.id, count);
+  }, [builds, widget.id, setWidgetIssueCount]);
 
   if (isLoading) {
     return (

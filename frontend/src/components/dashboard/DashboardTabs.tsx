@@ -10,6 +10,8 @@ export function DashboardTabs() {
     renamingDashboardId,
     startRenamingDashboard,
     stopRenamingDashboard,
+    widgets,
+    widgetIssueCounts,
   } = useDashboardStore();
 
   const createDashboard = useCreateDashboard();
@@ -65,7 +67,16 @@ export function DashboardTabs() {
       {dashboards.map((dashboard) => {
         const isActive = dashboard.id === currentDashboardId;
         const isRenaming = dashboard.id === renamingDashboardId;
-        const hasAttention = dashboard.attentionCount > 0;
+
+        // Calculate issue count for this dashboard
+        // For current dashboard, use live widget issue counts
+        // For other dashboards, we don't have live data (would need to fetch)
+        const issueCount = isActive
+          ? widgets
+              .filter((w) => w.dashboardId === dashboard.id)
+              .reduce((sum, w) => sum + (widgetIssueCounts[w.id] || 0), 0)
+          : dashboard.attentionCount || 0;
+        const hasIssues = issueCount > 0;
 
         return (
           <div
@@ -102,10 +113,10 @@ export function DashboardTabs() {
 
                 <span className="truncate max-w-28 font-mono">{dashboard.name}</span>
 
-                {/* Badge */}
-                {hasAttention ? (
+                {/* Badge - show issue count if any, otherwise widget count */}
+                {hasIssues ? (
                   <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
-                    {dashboard.attentionCount}
+                    {issueCount}
                   </span>
                 ) : dashboard.widgetCount > 0 ? (
                   <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#21262d] text-[#7d8590] font-mono">

@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
+import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, GerritChange } from '@dashboard/shared';
 
 interface GerritMyChangesProps {
@@ -76,6 +78,7 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
   const customQuery = widget.config.query as string || '';
   const baseQuery = 'owner:self (label:Code-Review<0 OR label:Verified<0)';
   const query = customQuery ? `${baseQuery} ${customQuery}` : baseQuery;
+  const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,
@@ -83,6 +86,12 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
     limit,
     refreshInterval: widget.refreshInterval,
   });
+
+  // Report issue count (changes needing attention)
+  useEffect(() => {
+    const count = changes?.length || 0;
+    setWidgetIssueCount(widget.id, count);
+  }, [changes, widget.id, setWidgetIssueCount]);
 
   if (isLoading) {
     return (
