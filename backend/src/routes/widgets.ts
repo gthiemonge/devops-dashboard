@@ -6,6 +6,7 @@ export const widgetsRouter = Router();
 
 interface DbWidget {
   id: number;
+  dashboard_id: number;
   type: string;
   title: string;
   data_source_id: number;
@@ -18,6 +19,7 @@ interface DbWidget {
 function mapToWidget(row: DbWidget): Widget {
   return {
     id: row.id,
+    dashboardId: row.dashboard_id,
     type: row.type as Widget['type'],
     title: row.title,
     dataSourceId: row.data_source_id,
@@ -28,8 +30,16 @@ function mapToWidget(row: DbWidget): Widget {
   };
 }
 
-widgetsRouter.get('/', (_req, res) => {
-  const rows = db.prepare('SELECT * FROM widgets ORDER BY id').all() as DbWidget[];
+widgetsRouter.get('/', (req, res) => {
+  const dashboardId = req.query.dashboardId ? parseInt(req.query.dashboardId as string) : undefined;
+
+  let rows: DbWidget[];
+  if (dashboardId) {
+    rows = db.prepare('SELECT * FROM widgets WHERE dashboard_id = ? ORDER BY id').all(dashboardId) as DbWidget[];
+  } else {
+    rows = db.prepare('SELECT * FROM widgets ORDER BY id').all() as DbWidget[];
+  }
+
   const widgets = rows.map(mapToWidget);
   const response: ApiResponse<Widget[]> = { success: true, data: widgets };
   res.json(response);
@@ -47,7 +57,7 @@ widgetsRouter.get('/:id', (req, res) => {
 });
 
 widgetsRouter.post('/', (req, res) => {
-  const { type, title, dataSourceId, config = {}, refreshInterval = 300 } = req.body as CreateWidgetDto;
+  const { dashboardId = 1, type, title, dataSourceId, config = {}, refreshInterval = 300 } = req.body as CreateWidgetDto;
   if (!type || !title || !dataSourceId) {
     const response: ApiResponse<null> = { success: false, error: 'Missing required fields' };
     res.status(400).json(response);
@@ -56,8 +66,8 @@ widgetsRouter.post('/', (req, res) => {
 
   try {
     const result = db.prepare(
-      'INSERT INTO widgets (type, title, data_source_id, config, refresh_interval) VALUES (?, ?, ?, ?, ?)'
-    ).run(type, title, dataSourceId, JSON.stringify(config), refreshInterval);
+      'INSERT INTO widgets (dashboard_id, type, title, data_source_id, config, refresh_interval) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(dashboardId, type, title, dataSourceId, JSON.stringify(config), refreshInterval);
 
     const row = db.prepare('SELECT * FROM widgets WHERE id = ?').get(result.lastInsertRowid) as DbWidget;
     const response: ApiResponse<Widget> = { success: true, data: mapToWidget(row) };

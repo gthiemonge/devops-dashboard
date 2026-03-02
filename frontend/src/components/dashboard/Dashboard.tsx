@@ -1,4 +1,7 @@
-import { useWidgets, useLayout, useDataSources } from '../../hooks/useWidgets';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useDashboards } from '../../hooks/useDashboards';
+import { useWidgets, useDataSources } from '../../hooks/useWidgets';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { DashboardGrid } from './DashboardGrid';
 import { SettingsModal } from '../settings/SettingsModal';
@@ -6,12 +9,20 @@ import { WidgetPicker } from '../settings/WidgetPicker';
 import { WidgetConfigModal } from '../settings/WidgetConfigModal';
 
 export function Dashboard() {
-  const { isLoading: widgetsLoading } = useWidgets();
-  const { isLoading: layoutLoading } = useLayout();
+  const queryClient = useQueryClient();
+  const { isLoading: dashboardsLoading } = useDashboards();
+  const { currentDashboardId, isSettingsOpen, isWidgetPickerOpen, editingWidgetId } = useDashboardStore();
+  const { isLoading: widgetsLoading, refetch: refetchWidgets } = useWidgets(currentDashboardId ?? undefined);
   const { isLoading: dataSourcesLoading } = useDataSources();
-  const { isSettingsOpen, isWidgetPickerOpen, editingWidgetId } = useDashboardStore();
 
-  const isLoading = widgetsLoading || layoutLoading || dataSourcesLoading;
+  // Refetch widgets when dashboard changes
+  useEffect(() => {
+    if (currentDashboardId) {
+      refetchWidgets();
+    }
+  }, [currentDashboardId, refetchWidgets]);
+
+  const isLoading = dashboardsLoading || widgetsLoading || dataSourcesLoading;
 
   if (isLoading) {
     return (

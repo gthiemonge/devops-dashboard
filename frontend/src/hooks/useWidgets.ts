@@ -1,15 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { widgetsApi, layoutApi, dataSourcesApi, summaryApi } from '../services/api';
+import { widgetsApi, dataSourcesApi, summaryApi, dashboardsApi } from '../services/api';
 import { useDashboardStore } from '../store/dashboardStore';
 import type { CreateWidgetDto, UpdateWidgetDto, LayoutItem } from '@dashboard/shared';
 import { useEffect } from 'react';
 
-export function useWidgets() {
-  const { setWidgets } = useDashboardStore();
+export function useWidgets(dashboardId?: number) {
+  const { setWidgets, currentDashboardId } = useDashboardStore();
+  const effectiveDashboardId = dashboardId ?? currentDashboardId;
 
   const query = useQuery({
-    queryKey: ['widgets'],
-    queryFn: widgetsApi.getAll,
+    queryKey: ['widgets', effectiveDashboardId],
+    queryFn: () => widgetsApi.getAll(effectiveDashboardId ?? undefined),
+    enabled: effectiveDashboardId !== null,
   });
 
   useEffect(() => {
@@ -17,23 +19,6 @@ export function useWidgets() {
       setWidgets(query.data);
     }
   }, [query.data, setWidgets]);
-
-  return query;
-}
-
-export function useLayout() {
-  const { setLayout } = useDashboardStore();
-
-  const query = useQuery({
-    queryKey: ['layout'],
-    queryFn: layoutApi.get,
-  });
-
-  useEffect(() => {
-    if (query.data) {
-      setLayout(query.data.items);
-    }
-  }, [query.data, setLayout]);
 
   return query;
 }
@@ -65,10 +50,13 @@ export function useSummary() {
 
 export function useCreateWidget() {
   const queryClient = useQueryClient();
-  const { addWidget, layout, setLayout } = useDashboardStore();
+  const { addWidget, layout, setLayout, currentDashboardId, updateDashboard } = useDashboardStore();
 
   return useMutation({
-    mutationFn: (dto: CreateWidgetDto) => widgetsApi.create(dto),
+    mutationFn: (dto: CreateWidgetDto) => widgetsApi.create({
+      ...dto,
+      dashboardId: dto.dashboardId ?? currentDashboardId ?? 1,
+    }),
     onSuccess: (widget) => {
       addWidget(widget);
       const newLayoutItem: LayoutItem = {
@@ -82,9 +70,15 @@ export function useCreateWidget() {
       };
       const newLayout = [...layout, newLayoutItem];
       setLayout(newLayout);
-      layoutApi.update({ items: newLayout });
+
+      // Update dashboard layout
+      if (currentDashboardId) {
+        dashboardsApi.update(currentDashboardId, { layout: newLayout });
+        updateDashboard(currentDashboardId, { layout: newLayout });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
-      queryClient.invalidateQueries({ queryKey: ['layout'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
     },
   });
@@ -107,7 +101,7 @@ export function useUpdateWidget() {
 
 export function useDeleteWidget() {
   const queryClient = useQueryClient();
-  const { removeWidget, layout, setLayout } = useDashboardStore();
+  const { removeWidget, layout, setLayout, currentDashboardId, updateDashboard } = useDashboardStore();
 
   return useMutation({
     mutationFn: (id: number) => widgetsApi.delete(id),
@@ -115,21 +109,35 @@ export function useDeleteWidget() {
       removeWidget(id);
       const newLayout = layout.filter((l) => l.i !== id.toString());
       setLayout(newLayout);
-      layoutApi.update({ items: newLayout });
+
+      // Update dashboard layout
+      if (currentDashboardId) {
+        dashboardsApi.update(currentDashboardId, { layout: newLayout });
+        updateDashboard(currentDashboardId, { layout: newLayout });
+      }
+
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
-      queryClient.invalidateQueries({ queryKey: ['layout'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
       queryClient.invalidateQueries({ queryKey: ['summary'] });
     },
   });
 }
 
 export function useUpdateLayout() {
-  const { setLayout } = useDashboardStore();
+  const { setLayout, currentDashboardId, updateDashboard } = useDashboardStore();
 
   return useMutation({
-    mutationFn: (items: LayoutItem[]) => layoutApi.update({ items }),
-    onSuccess: (layout) => {
-      setLayout(layout.items);
+    mutationFn: (items: LayoutItem[]) => {
+      if (currentDashboardId) {
+        return dashboardsApi.update(currentDashboardId, { layout: items });
+      }
+      return Promise.resolve(null);
+    },
+    onSuccess: (_, items) => {
+      setLayout(items);
+      if (currentDashboardId) {
+        updateDashboard(currentDashboardId, { layout: items });
+      }
     },
   });
 }

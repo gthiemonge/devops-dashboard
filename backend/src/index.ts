@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { config } from './config/env.js';
 import { initializeDatabase } from './db/database.js';
+import { dashboardsRouter } from './routes/dashboards.js';
 import { dataSourcesRouter } from './routes/datasources.js';
 import { credentialsRouter } from './routes/credentials.js';
 import { widgetsRouter } from './routes/widgets.js';
@@ -16,6 +17,7 @@ app.use(express.json());
 
 initializeDatabase();
 
+app.use('/api/v1/dashboards', dashboardsRouter);
 app.use('/api/v1/datasources', dataSourcesRouter);
 app.use('/api/v1/credentials', credentialsRouter);
 app.use('/api/v1/widgets', widgetsRouter);

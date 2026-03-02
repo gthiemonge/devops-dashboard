@@ -1,5 +1,9 @@
 import type {
   ApiResponse,
+  Dashboard,
+  DashboardWithCounts,
+  CreateDashboardDto,
+  UpdateDashboardDto,
   DataSource,
   CreateDataSourceDto,
   UpdateDataSourceDto,
@@ -37,6 +41,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data.data as T;
 }
 
+export const dashboardsApi = {
+  getAll: () => request<DashboardWithCounts[]>('/dashboards'),
+  get: (id: number) => request<Dashboard>(`/dashboards/${id}`),
+  create: (dto: CreateDashboardDto) =>
+    request<Dashboard>('/dashboards', { method: 'POST', body: JSON.stringify(dto) }),
+  update: (id: number, dto: UpdateDashboardDto) =>
+    request<Dashboard>(`/dashboards/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
+  delete: (id: number) =>
+    request<null>(`/dashboards/${id}`, { method: 'DELETE' }),
+  reorder: (order: number[]) =>
+    request<Dashboard[]>('/dashboards/reorder', { method: 'POST', body: JSON.stringify({ order }) }),
+};
+
 export const dataSourcesApi = {
   getAll: () => request<DataSource[]>('/datasources'),
   get: (id: number) => request<DataSource>(`/datasources/${id}`),
@@ -60,7 +77,10 @@ export const credentialsApi = {
 };
 
 export const widgetsApi = {
-  getAll: () => request<Widget[]>('/widgets'),
+  getAll: (dashboardId?: number) => {
+    const params = dashboardId ? `?dashboardId=${dashboardId}` : '';
+    return request<Widget[]>(`/widgets${params}`);
+  },
   get: (id: number) => request<Widget>(`/widgets/${id}`),
   create: (dto: CreateWidgetDto) =>
     request<Widget>('/widgets', { method: 'POST', body: JSON.stringify(dto) }),

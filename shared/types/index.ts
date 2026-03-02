@@ -24,6 +24,7 @@ export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit
 
 export interface Widget {
   id: number;
+  dashboardId: number;
   type: WidgetType;
   title: string;
   dataSourceId: number;
@@ -60,6 +61,21 @@ export interface Layout {
   items: LayoutItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+// Dashboard Types
+export interface Dashboard {
+  id: number;
+  name: string;
+  position: number;
+  layout: LayoutItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DashboardWithCounts extends Dashboard {
+  widgetCount: number;
+  attentionCount: number;
 }
 
 // Gerrit Types
@@ -196,6 +212,7 @@ export interface UpdateCredentialDto {
 }
 
 export interface CreateWidgetDto {
+  dashboardId?: number;
   type: WidgetType;
   title: string;
   dataSourceId: number;
@@ -212,4 +229,15 @@ export interface UpdateWidgetDto {
 export interface UpdateLayoutDto {
   name?: string;
   items: LayoutItem[];
+}
+
+export interface CreateDashboardDto {
+  name: string;
+  position?: number;
+}
+
+export interface UpdateDashboardDto {
+  name?: string;
+  position?: number;
+  layout?: LayoutItem[];
 }
