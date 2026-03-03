@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import db from '../db/database.js';
-import { GerritProvider, ZuulProvider, IrcProvider } from '../providers/index.js';
+import { GerritProvider, ZuulProvider, IrcProvider, LaunchpadProvider } from '../providers/index.js';
 import { cacheService } from '../services/cache.service.js';
-import type { ApiResponse, GerritChange, ZuulBuild, IrcMessage } from '@dashboard/shared';
+import type { ApiResponse, GerritChange, ZuulBuild, IrcMessage, LaunchpadBugWithTask, LaunchpadBugStatus } from '@dashboard/shared';
 
 export const proxyRouter = Router();
 
@@ -125,6 +125,48 @@ proxyRouter.get('/irc/messages', async (req: Request, res: Response) => {
       success: true,
       data: result,
     };
+    res.json(response);
+  } catch (err) {
+    const response: ApiResponse<null> = { success: false, error: (err as Error).message };
+    res.status(500).json(response);
+  }
+});
+
+proxyRouter.get('/launchpad/bugs', async (req: Request, res: Response) => {
+  try {
+    const dataSourceId = parseInt(req.query.dataSourceId as string) || 4;
+    const project = req.query.project as string;
+    const statusesParam = req.query.statuses as string;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const sortBy = (req.query.sortBy as 'id' | 'status' | 'importance') || 'id';
+    const fetchTags = req.query.fetchTags === 'true';
+
+    if (!project) {
+      const response: ApiResponse<null> = { success: false, error: 'Project parameter is required' };
+      res.status(400).json(response);
+      return;
+    }
+
+    const dataSource = getDataSource(dataSourceId);
+    if (!dataSource || dataSource.type !== 'launchpad') {
+      const response: ApiResponse<null> = { success: false, error: 'Launchpad data source not found' };
+      res.status(404).json(response);
+      return;
+    }
+
+    const provider = new LaunchpadProvider({ baseUrl: dataSource.base_url });
+
+    const statuses = statusesParam
+      ? (statusesParam.split(',') as LaunchpadBugStatus[])
+      : undefined;
+
+    const cacheKey = `launchpad:bugs:${dataSourceId}:${project}:${statusesParam || 'default'}:${sortBy}:${limit}:${fetchTags}`;
+
+    const bugs = await cacheService.getOrSet<LaunchpadBugWithTask[]>(cacheKey, () =>
+      provider.getBugTasks({ project, statuses, limit, sortBy, fetchTags })
+    );
+
+    const response: ApiResponse<LaunchpadBugWithTask[]> = { success: true, data: bugs };
     res.json(response);
   } catch (err) {
     const response: ApiResponse<null> = { success: false, error: (err as Error).message };

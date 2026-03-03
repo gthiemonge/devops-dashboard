@@ -19,6 +19,8 @@ import type {
   GerritChange,
   ZuulBuild,
   IrcMessage,
+  LaunchpadBugWithTask,
+  LaunchpadBugStatus,
   DashboardSummary,
 } from '@dashboard/shared';
 
@@ -124,6 +126,25 @@ export const proxyApi = {
     searchParams.append('channel', params.channel);
     if (params.limit) searchParams.append('limit', params.limit.toString());
     return request<{ messages: IrcMessage[]; dates: string[] }>(`/proxy/irc/messages?${searchParams.toString()}`);
+  },
+  getLaunchpadBugs: (params: {
+    dataSourceId?: number;
+    project: string;
+    statuses?: LaunchpadBugStatus[];
+    limit?: number;
+    sortBy?: 'id' | 'status' | 'importance';
+    fetchTags?: boolean;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
+    searchParams.append('project', params.project);
+    if (params.statuses && params.statuses.length > 0) {
+      searchParams.append('statuses', params.statuses.join(','));
+    }
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    if (params.sortBy) searchParams.append('sortBy', params.sortBy);
+    if (params.fetchTags) searchParams.append('fetchTags', 'true');
+    return request<LaunchpadBugWithTask[]>(`/proxy/launchpad/bugs?${searchParams.toString()}`);
   },
 };
 

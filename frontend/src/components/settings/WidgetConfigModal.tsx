@@ -197,6 +197,89 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
           </div>
         )}
 
+        {widget.type === 'launchpad_bugs' && (
+          <>
+            <div>
+              <label className={labelClass}>Project</label>
+              <input
+                type="text"
+                value={(config.project as string) || ''}
+                onChange={(e) => setConfig({ ...config, project: e.target.value })}
+                className={inputClass}
+                placeholder="octavia"
+              />
+              <p className="text-[10px] text-[#484f58] mt-1">Launchpad project name (without openstack/ prefix)</p>
+            </div>
+            <div>
+              <label className={labelClass}>Bug Statuses</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {['New', 'Incomplete', 'Confirmed', 'Triaged', 'In Progress', 'Fix Committed'].map((status) => (
+                  <label key={status} className="flex items-center gap-1.5 text-xs text-[#7d8590]">
+                    <input
+                      type="checkbox"
+                      checked={(config.statuses as string[] || []).includes(status)}
+                      onChange={(e) => {
+                        const currentStatuses = (config.statuses as string[]) || [];
+                        const newStatuses = e.target.checked
+                          ? [...currentStatuses, status]
+                          : currentStatuses.filter((s) => s !== status);
+                        setConfig({ ...config, statuses: newStatuses });
+                      }}
+                      className="rounded border-[#30363d] bg-[#0a0e14] text-cyan-500 focus:ring-cyan-500/20"
+                    />
+                    {status}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Sort By</label>
+              <select
+                value={(config.sortBy as string) || 'id'}
+                onChange={(e) => setConfig({ ...config, sortBy: e.target.value })}
+                className={inputClass}
+              >
+                <option value="id">Bug ID (newest first)</option>
+                <option value="importance">Importance</option>
+                <option value="status">Status</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelClass}>Display Fields</label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {['title', 'id', 'status', 'reporter', 'assignee', 'tags'].map((field) => (
+                  <label key={field} className="flex items-center gap-1.5 text-xs text-[#7d8590]">
+                    <input
+                      type="checkbox"
+                      checked={(config.displayFields as string[] || []).includes(field)}
+                      onChange={(e) => {
+                        const currentFields = (config.displayFields as string[]) || [];
+                        const newFields = e.target.checked
+                          ? [...currentFields, field]
+                          : currentFields.filter((f) => f !== field);
+                        setConfig({ ...config, displayFields: newFields });
+                      }}
+                      className="rounded border-[#30363d] bg-[#0a0e14] text-cyan-500 focus:ring-cyan-500/20"
+                    />
+                    {field.charAt(0).toUpperCase() + field.slice(1)}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-xs text-[#7d8590]">
+                <input
+                  type="checkbox"
+                  checked={(config.fetchTags as boolean) || false}
+                  onChange={(e) => setConfig({ ...config, fetchTags: e.target.checked })}
+                  className="rounded border-[#30363d] bg-[#0a0e14] text-cyan-500 focus:ring-cyan-500/20"
+                />
+                <span>Fetch tags (slower - requires extra API calls)</span>
+              </label>
+            </div>
+          </>
+        )}
+
         <div>
           <label className={labelClass}>Max Items</label>
           <input

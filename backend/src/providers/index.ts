@@ -5,3 +5,5 @@ export { ZuulProvider } from './zuul.provider.js';
 export type { ZuulBuildsQuery } from './zuul.provider.js';
 export { IrcProvider } from './irc.provider.js';
 export type { IrcProviderConfig } from './irc.provider.js';
+export { LaunchpadProvider } from './launchpad.provider.js';
+export type { LaunchpadBugsQuery } from './launchpad.provider.js';

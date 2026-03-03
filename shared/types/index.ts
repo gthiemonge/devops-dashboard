@@ -20,7 +20,7 @@ export interface Credential {
 }
 
 // Widget Types
-export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'zuul_periodic_jobs' | 'irc_recent_messages';
+export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'zuul_periodic_jobs' | 'irc_recent_messages' | 'launchpad_bugs';
 
 export interface Widget {
   id: number;
@@ -178,6 +178,49 @@ export interface IrcLogResponse {
   channel: string;
   messages: IrcMessage[];
   dates: string[];
+}
+
+// Launchpad Types
+export type LaunchpadBugStatus = 'New' | 'Incomplete' | 'Confirmed' | 'Triaged' | 'In Progress' | 'Fix Committed' | 'Fix Released';
+export type LaunchpadBugImportance = 'Critical' | 'High' | 'Medium' | 'Low' | 'Wishlist' | 'Undecided';
+
+export interface LaunchpadBugTask {
+  self_link: string;
+  web_link: string;
+  bug_link: string;
+  title: string;
+  status: LaunchpadBugStatus;
+  importance: LaunchpadBugImportance;
+  assignee_link: string | null;
+  owner_link: string;
+  date_created: string;
+  date_assigned: string | null;
+  date_confirmed: string | null;
+  date_fix_committed: string | null;
+  date_fix_released: string | null;
+  date_in_progress: string | null;
+  date_triaged: string | null;
+  bug_target_name: string;
+}
+
+export interface LaunchpadBug {
+  id: number;
+  self_link: string;
+  web_link: string;
+  title: string;
+  description: string;
+  tags: string[];
+  heat: number;
+  date_created: string;
+  date_last_updated: string;
+  owner_link: string;
+}
+
+export interface LaunchpadBugWithTask extends LaunchpadBugTask {
+  bug_id: number;
+  bug?: LaunchpadBug;
+  reporter_name?: string;
+  assignee_name?: string;
 }
 
 // API Response Types

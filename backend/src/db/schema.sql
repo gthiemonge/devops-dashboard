@@ -75,7 +75,8 @@ CREATE INDEX IF NOT EXISTS idx_dashboards_position ON dashboards(position);
 INSERT OR IGNORE INTO data_sources (name, type, base_url) VALUES
     ('OpenDev Gerrit', 'gerrit', 'https://review.opendev.org'),
     ('OpenStack Zuul', 'zuul', 'https://zuul.openstack.org'),
-    ('OpenDev IRC Logs', 'irc', 'https://meetings.opendev.org/irclogs');
+    ('OpenDev IRC Logs', 'irc', 'https://meetings.opendev.org/irclogs'),
+    ('Launchpad', 'launchpad', 'https://api.launchpad.net/1.0');
 
 -- Seed widget types
 INSERT OR IGNORE INTO widget_types (name, display_name, description, supported_source_types, default_config) VALUES
@@ -83,7 +84,8 @@ INSERT OR IGNORE INTO widget_types (name, display_name, description, supported_s
     ('gerrit_my_changes', 'My Gerrit Changes', 'Shows your changes needing attention', '["gerrit"]', '{"limit": 10}'),
     ('gerrit_user_changes', 'User''s Gerrit Changes', 'Shows another user''s open changes', '["gerrit"]', '{"owner": "", "limit": 10}'),
     ('zuul_periodic_jobs', 'Failed Periodic Jobs', 'Shows failed periodic Zuul jobs', '["zuul"]', '{"project": "openstack/octavia", "pipeline": "periodic", "limit": 10}'),
-    ('irc_recent_messages', 'IRC Recent Messages', 'Shows recent IRC messages from a channel', '["irc"]', '{"channel": "openstack-lbaas", "limit": 20}');
+    ('irc_recent_messages', 'IRC Recent Messages', 'Shows recent IRC messages from a channel', '["irc"]', '{"channel": "openstack-lbaas", "limit": 20}'),
+    ('launchpad_bugs', 'Launchpad Bugs', 'Shows open bugs from a Launchpad project', '["launchpad"]', '{"project": "octavia", "limit": 10, "statuses": ["New", "Confirmed", "Triaged", "In Progress"], "sortBy": "id", "displayFields": ["title", "status", "id"], "fetchTags": false}');
 
 -- Seed default dashboard
 INSERT OR IGNORE INTO dashboards (id, name, position, layout) VALUES (1, 'Main', 0, '[]');

@@ -6,6 +6,7 @@ import { GerritMyChanges } from '../widgets/GerritMyChanges';
 import { GerritUserChanges } from '../widgets/GerritUserChanges';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
 import { IrcRecentMessages } from '../widgets/IrcRecentMessages';
+import { LaunchpadBugs } from '../widgets/LaunchpadBugs';
 import type { Widget, WidgetConfig, WidgetType } from '@dashboard/shared';
 
 function formatProjects(projectInput: string | undefined): string {
@@ -67,6 +68,12 @@ function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig): string
   return null;
 }
 
+function generateLaunchpadSearchUrl(config: WidgetConfig): string | null {
+  const project = config.project as string;
+  if (!project) return null;
+  return `https://bugs.launchpad.net/${project}/+bugs`;
+}
+
 function getWidgetIcon(type: WidgetType): JSX.Element {
   switch (type) {
     case 'gerrit_recent_changes':
@@ -89,6 +96,12 @@ function getWidgetIcon(type: WidgetType): JSX.Element {
           <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
         </svg>
       );
+    case 'launchpad_bugs':
+      return (
+        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 8h-1.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H5v2h1.09c-.05.33-.09.66-.09 1v1H5v2h1v1c0 .34.04.67.09 1H5v2h1.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H19v-2h-1.09c.05-.33.09-.66.09-1v-1h1v-2h-1v-1c0-.34-.04-.67-.09-1H19V8zm-6 8h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+        </svg>
+      );
     default:
       return (
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
@@ -108,6 +121,8 @@ function getWidgetColor(type: WidgetType): string {
       return 'text-amber-400';
     case 'irc_recent_messages':
       return 'text-purple-400';
+    case 'launchpad_bugs':
+      return 'text-orange-400';
     default:
       return 'text-cyan-400';
   }
@@ -138,6 +153,8 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
     }
     case 'irc_recent_messages':
       return channel ? `#${channel}` : 'IRC';
+    case 'launchpad_bugs':
+      return shortProject ? `Bugs: ${shortProject}` : 'Launchpad Bugs';
     default:
       return 'Widget';
   }
@@ -149,7 +166,9 @@ interface WidgetContainerProps {
 
 export function WidgetContainer({ widget }: WidgetContainerProps) {
   const title = generateTitle(widget.type, widget.config);
-  const searchUrl = generateGerritSearchUrl(widget.type, widget.config);
+  const searchUrl = widget.type === 'launchpad_bugs'
+    ? generateLaunchpadSearchUrl(widget.config)
+    : generateGerritSearchUrl(widget.type, widget.config);
   const { editWidget } = useDashboardStore();
   const deleteWidget = useDeleteWidget();
   const widgetColor = getWidgetColor(widget.type);
@@ -172,6 +191,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
         return <ZuulPeriodicJobs widget={widget} />;
       case 'irc_recent_messages':
         return <IrcRecentMessages widget={widget} />;
+      case 'launchpad_bugs':
+        return <LaunchpadBugs widget={widget} />;
       default:
         return <div className="text-[#7d8590] text-sm">Unknown widget type</div>;
     }
