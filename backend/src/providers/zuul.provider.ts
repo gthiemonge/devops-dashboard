@@ -6,6 +6,7 @@ export interface ZuulBuildsQuery {
   pipeline?: string;
   branch?: string;
   result?: string;
+  results?: string[];  // Multiple results to fetch in parallel
   limit?: number;
   skip?: number;
 }
@@ -18,6 +19,22 @@ export class ZuulProvider extends BaseProvider {
   }
 
   async getBuilds(query: ZuulBuildsQuery = {}): Promise<ZuulBuild[]> {
+    // If multiple results specified, fetch each in parallel and merge
+    if (query.results && query.results.length > 0) {
+      const fetchPromises = query.results.map((result) =>
+        this.fetchBuildsForResult({ ...query, result, results: undefined })
+      );
+      const allResults = await Promise.all(fetchPromises);
+      const merged = allResults.flat();
+      // Sort by end_time descending and apply limit
+      merged.sort((a, b) => new Date(b.end_time).getTime() - new Date(a.end_time).getTime());
+      return query.limit ? merged.slice(0, query.limit) : merged;
+    }
+
+    return this.fetchBuildsForResult(query);
+  }
+
+  private async fetchBuildsForResult(query: ZuulBuildsQuery): Promise<ZuulBuild[]> {
     const params = new URLSearchParams();
     if (query.project) params.append('project', query.project);
     if (query.pipeline) params.append('pipeline', query.pipeline);

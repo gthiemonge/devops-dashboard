@@ -27,6 +27,19 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function getResultBadge(result: string): { label: string; className: string; borderClass: string } {
+  switch (result) {
+    case 'FAILURE':
+      return { label: 'FAIL', className: 'bg-red-500/20 text-red-400 border-red-500/30', borderClass: 'border-red-500/50 hover:border-red-500' };
+    case 'POST_FAILURE':
+      return { label: 'POST', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30', borderClass: 'border-orange-500/50 hover:border-orange-500' };
+    case 'RETRY_LIMIT':
+      return { label: 'RETRY', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', borderClass: 'border-yellow-500/50 hover:border-yellow-500' };
+    default:
+      return { label: result.slice(0, 4), className: 'bg-gray-500/20 text-gray-400 border-gray-500/30', borderClass: 'border-gray-500/50 hover:border-gray-500' };
+  }
+}
+
 export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const project = widget.config.project as string;
   const pipeline = (widget.config.pipeline as string) || 'periodic';
@@ -34,19 +47,21 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const days = (widget.config.days as number) || 7;
   const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
 
+  const failureResults = ['FAILURE', 'POST_FAILURE', 'RETRY_LIMIT'];
+
   const { data: rawBuilds, isLoading, error } = useZuulBuilds({
     dataSourceId: widget.dataSourceId,
     project,
     pipeline,
-    result: 'FAILURE',
-    limit: limit * 3, // Fetch more to account for date filtering
+    limit: limit * 5, // Fetch more to account for filtering
     refreshInterval: widget.refreshInterval,
   });
 
-  // Filter builds by date and limit
+  // Filter builds by result type, date, and limit
   const builds = rawBuilds
     ? rawBuilds
         .filter((build) => {
+          if (!failureResults.includes(build.result)) return false;
           const buildDate = new Date(build.end_time);
           const cutoffDate = new Date();
           cutoffDate.setDate(cutoffDate.getDate() - days);
@@ -90,13 +105,15 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
 
   return (
     <div className="space-y-0.5">
-      {builds.map((build: ZuulBuild) => (
+      {builds.map((build: ZuulBuild) => {
+        const badge = getResultBadge(build.result);
+        return (
         <a
           key={build.uuid}
           href={build.log_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block px-2 py-1.5 rounded hover:bg-[#161b22] transition-colors group border-l-2 border-red-500/50 hover:border-red-500"
+          className={`block px-2 py-1.5 rounded hover:bg-[#161b22] transition-colors group border-l-2 ${badge.borderClass}`}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -117,12 +134,13 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
                 </span>
               </div>
             </div>
-            <span className="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded bg-red-500/20 text-red-400 border border-red-500/30">
-              FAIL
+            <span className={`px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${badge.className}`}>
+              {badge.label}
             </span>
           </div>
         </a>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -6,6 +6,7 @@ interface UseZuulBuildsOptions {
   project?: string;
   pipeline?: string;
   result?: string;
+  results?: string[];
   limit?: number;
   refreshInterval?: number;
   enabled?: boolean;
@@ -13,13 +14,14 @@ interface UseZuulBuildsOptions {
 
 export function useZuulBuilds(options: UseZuulBuildsOptions) {
   return useQuery({
-    queryKey: ['zuulBuilds', options.dataSourceId, options.project, options.pipeline, options.result, options.limit],
+    queryKey: ['zuulBuilds', options.dataSourceId, options.project, options.pipeline, options.result, options.results, options.limit],
     queryFn: () =>
       proxyApi.getZuulBuilds({
         dataSourceId: options.dataSourceId,
         project: options.project,
         pipeline: options.pipeline,
         result: options.result,
+        results: options.results,
         limit: options.limit,
       }),
     refetchInterval: options.refreshInterval ? options.refreshInterval * 1000 : undefined,

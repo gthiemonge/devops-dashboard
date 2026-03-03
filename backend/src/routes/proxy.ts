@@ -65,6 +65,7 @@ proxyRouter.get('/zuul/builds', async (req: Request, res: Response) => {
     const project = req.query.project as string;
     const pipeline = req.query.pipeline as string;
     const result = req.query.result as string;
+    const resultsParam = req.query.results as string;
     const limit = parseInt(req.query.limit as string) || 10;
 
     const dataSource = getDataSource(dataSourceId);
@@ -76,9 +77,11 @@ proxyRouter.get('/zuul/builds', async (req: Request, res: Response) => {
 
     const provider = new ZuulProvider({ baseUrl: dataSource.base_url });
 
-    const cacheKey = `zuul:builds:${dataSourceId}:${project}:${pipeline}:${result}:${limit}`;
+    // Support multiple results (comma-separated) or single result
+    const results = resultsParam ? resultsParam.split(',') : undefined;
+    const cacheKey = `zuul:builds:${dataSourceId}:${project}:${pipeline}:${resultsParam || result}:${limit}`;
     const builds = await cacheService.getOrSet<ZuulBuild[]>(cacheKey, () =>
-      provider.getBuilds({ project, pipeline, result, limit })
+      provider.getBuilds({ project, pipeline, result, results, limit })
     );
 
     const response: ApiResponse<ZuulBuild[]> = { success: true, data: builds };

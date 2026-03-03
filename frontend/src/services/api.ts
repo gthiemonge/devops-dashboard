@@ -111,12 +111,16 @@ export const proxyApi = {
     if (params.n) searchParams.append('n', params.n.toString());
     return request<GerritChange[]>(`/proxy/gerrit/changes?${searchParams.toString()}`);
   },
-  getZuulBuilds: (params: { dataSourceId?: number; project?: string; pipeline?: string; result?: string; limit?: number }) => {
+  getZuulBuilds: (params: { dataSourceId?: number; project?: string; pipeline?: string; result?: string; results?: string[]; limit?: number }) => {
     const searchParams = new URLSearchParams();
     if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
     if (params.project) searchParams.append('project', params.project);
     if (params.pipeline) searchParams.append('pipeline', params.pipeline);
-    if (params.result) searchParams.append('result', params.result);
+    if (params.results && params.results.length > 0) {
+      searchParams.append('results', params.results.join(','));
+    } else if (params.result) {
+      searchParams.append('result', params.result);
+    }
     if (params.limit) searchParams.append('limit', params.limit.toString());
     return request<ZuulBuild[]>(`/proxy/zuul/builds?${searchParams.toString()}`);
   },
