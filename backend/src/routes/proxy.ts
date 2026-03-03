@@ -108,18 +108,14 @@ proxyRouter.get('/irc/messages', async (req: Request, res: Response) => {
       return;
     }
 
-    const provider = new IrcProvider({ baseUrl: dataSource.base_url });
+    // Pass cache service to provider for per-day caching
+    // Today's logs: 5 minutes, previous days: 1 day
+    const provider = new IrcProvider({
+      baseUrl: dataSource.base_url,
+      cache: cacheService,
+    });
 
-    // Use longer cache for IRC (messages don't change once posted)
-    // Cache key includes date so today's cache expires normally
-    const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `irc:messages:${dataSourceId}:${channel}:${limit}:${today}`;
-
-    const result = await cacheService.getOrSet<{ messages: IrcMessage[]; dates: string[] }>(
-      cacheKey,
-      () => provider.getMessages(channel, limit),
-      300 // 5 minutes cache for current day
-    );
+    const result = await provider.getMessages(channel, limit);
 
     const response: ApiResponse<{ messages: IrcMessage[]; dates: string[] }> = {
       success: true,

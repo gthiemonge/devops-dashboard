@@ -35,7 +35,10 @@ class CacheService {
   getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl?: number): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== undefined) {
-      const service = key.startsWith('gerrit') || key.startsWith('summary:gerrit') ? 'gerrit' : 'zuul';
+      let service: 'gerrit' | 'zuul' | 'irc' | 'launchpad' = 'zuul';
+      if (key.startsWith('gerrit') || key.startsWith('summary:gerrit')) service = 'gerrit';
+      else if (key.startsWith('irc')) service = 'irc';
+      else if (key.startsWith('launchpad')) service = 'launchpad';
       logApiCall({
         timestamp: new Date().toISOString(),
         service,

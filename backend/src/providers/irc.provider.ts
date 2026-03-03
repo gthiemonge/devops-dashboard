@@ -3,6 +3,9 @@ import type { IrcMessage } from '@dashboard/shared';
 
 export interface IrcProviderConfig {
   baseUrl: string;
+  cache?: {
+    getOrSet: <T>(key: string, fn: () => Promise<T>, ttl?: number) => Promise<T>;
+  };
 }
 
 export class IrcProvider {
@@ -80,60 +83,84 @@ export class IrcProvider {
     return messages;
   }
 
+  private async fetchDayLogs(channel: string, dateStr: string): Promise<IrcMessage[]> {
+    const channelEncoded = encodeURIComponent(`#${channel}`);
+    const channelWithHash = `%23${channel}`;
+    const filename = `${channelWithHash}.${dateStr}.log.html`;
+    const url = `${this.config.baseUrl}/${channelEncoded}/${filename}`;
+
+    const startTime = Date.now();
+    let status: 'success' | 'error' = 'success';
+    let statusCode: number | undefined;
+    let errorMsg: string | undefined;
+
+    try {
+      const response = await fetch(url);
+      statusCode = response.status;
+
+      if (response.ok) {
+        const html = await response.text();
+        return this.parseHtmlMessages(html, channel, dateStr);
+      } else if (response.status !== 404) {
+        status = 'error';
+        errorMsg = `HTTP ${response.status}`;
+      }
+      return [];
+    } catch (err) {
+      status = 'error';
+      errorMsg = (err as Error).message;
+      return [];
+    } finally {
+      const duration = Date.now() - startTime;
+      logApiCall({
+        timestamp: new Date().toISOString(),
+        service: this.serviceName,
+        method: 'GET',
+        url,
+        duration,
+        status,
+        statusCode,
+        error: errorMsg,
+      });
+    }
+  }
+
   async getMessages(channel: string, minMessages: number = 20): Promise<{ messages: IrcMessage[]; dates: string[] }> {
     const allMessages: IrcMessage[] = [];
     const dates: string[] = [];
-    const channelEncoded = encodeURIComponent(`#${channel}`);
 
     // Start with today and go backwards
     const today = new Date();
+    const todayStr = this.formatDate(today);
     let currentDate = new Date(today);
     let daysChecked = 0;
-    const maxDays = 14; // Don't go back more than 2 weeks
+    const maxDays = 5; // Don't go back more than 5 days
+
+    // Cache TTLs: 5 minutes for today, 1 day for previous days
+    const TODAY_CACHE_TTL = 300;      // 5 minutes
+    const PAST_DAY_CACHE_TTL = 86400; // 1 day
 
     while (allMessages.length < minMessages && daysChecked < maxDays) {
       const dateStr = this.formatDate(currentDate);
-      const channelWithHash = `%23${channel}`;
-      const filename = `${channelWithHash}.${dateStr}.log.html`;
-      const url = `${this.config.baseUrl}/${channelEncoded}/${filename}`;
+      const isToday = dateStr === todayStr;
+      const cacheTTL = isToday ? TODAY_CACHE_TTL : PAST_DAY_CACHE_TTL;
+      const cacheKey = `irc:day:${channel}:${dateStr}`;
 
-      const startTime = Date.now();
-      let status: 'success' | 'error' = 'success';
-      let statusCode: number | undefined;
-      let errorMsg: string | undefined;
+      let messages: IrcMessage[];
 
-      try {
-        const response = await fetch(url);
-        statusCode = response.status;
+      if (this.config.cache) {
+        messages = await this.config.cache.getOrSet(
+          cacheKey,
+          () => this.fetchDayLogs(channel, dateStr),
+          cacheTTL
+        );
+      } else {
+        messages = await this.fetchDayLogs(channel, dateStr);
+      }
 
-        if (response.ok) {
-          const html = await response.text();
-          const messages = this.parseHtmlMessages(html, channel, dateStr);
-
-          if (messages.length > 0) {
-            allMessages.unshift(...messages); // Add older messages at the beginning
-            dates.unshift(dateStr);
-          }
-        } else if (response.status !== 404) {
-          // 404 is expected for days with no activity
-          status = 'error';
-          errorMsg = `HTTP ${response.status}`;
-        }
-      } catch (err) {
-        status = 'error';
-        errorMsg = (err as Error).message;
-      } finally {
-        const duration = Date.now() - startTime;
-        logApiCall({
-          timestamp: new Date().toISOString(),
-          service: this.serviceName,
-          method: 'GET',
-          url,
-          duration,
-          status,
-          statusCode,
-          error: errorMsg,
-        });
+      if (messages.length > 0) {
+        allMessages.unshift(...messages); // Add older messages at the beginning
+        dates.unshift(dateStr);
       }
 
       currentDate.setDate(currentDate.getDate() - 1);
