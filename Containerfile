@@ -43,8 +43,8 @@ COPY --from=builder /app/frontend/dist ./backend/dist/public
 # Copy database schema for initialization
 COPY backend/src/db/schema.sql ./backend/dist/db/
 
-# Create data directory for SQLite
-RUN mkdir -p /app/backend/data && chown -R node:node /app/backend/data
+# Create data and logs directories
+RUN mkdir -p /app/backend/data /app/backend/logs && chown -R node:node /app/backend/data /app/backend/logs
 
 # Environment variables
 ENV NODE_ENV=production
