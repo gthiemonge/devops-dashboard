@@ -138,6 +138,10 @@ export function GerritUserChanges({ widget }: GerritUserChangesProps) {
                 {change.subject}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[10px] font-mono text-emerald-400/70">
+                  {change._number}
+                </span>
+                <span className="text-[#484f58]">·</span>
                 <span className="text-[10px] font-mono text-cyan-400/70">
                   {change.project.replace('openstack/', '')}
                 </span>
