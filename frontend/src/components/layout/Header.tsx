@@ -2,10 +2,11 @@ import { useDashboardStore } from '../../store/dashboardStore';
 import { DashboardTabs } from '../dashboard/DashboardTabs';
 
 export function Header() {
-  const { openSettings, openWidgetPicker, widgetIssueCounts } = useDashboardStore();
+  const { openSettings, openWidgetPicker, widgetIssueCounts, widgetNewItemCounts, newItemsHours } = useDashboardStore();
 
-  // Calculate total issues from all tracked widgets
+  // Calculate totals from all tracked widgets
   const totalIssues = Object.values(widgetIssueCounts).reduce((sum, count) => sum + count, 0);
+  const totalNewItems = Object.values(widgetNewItemCounts).reduce((sum, count) => sum + count, 0);
 
   return (
     <header className="bg-[#0d1117] border-b border-[#21262d]">
@@ -29,20 +30,33 @@ export function Header() {
             </div>
           </div>
 
-          {/* Status indicator */}
-          <div className={`hidden sm:flex items-center gap-2 ml-4 px-3 py-1 rounded-full border ${
-            totalIssues > 0
-              ? 'bg-red-500/10 border-red-500/30'
-              : 'bg-[#161b22] border-[#21262d]'
-          }`}>
-            <span className={`w-2 h-2 rounded-full ${
-              totalIssues > 0 ? 'bg-red-500 pulse-dot' : 'bg-emerald-500'
-            }`}></span>
-            <span className={`text-xs font-mono ${
-              totalIssues > 0 ? 'text-red-400' : 'text-[#7d8590]'
+          {/* Status indicators */}
+          <div className="hidden sm:flex items-center gap-2 ml-4">
+            {/* Issues indicator */}
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${
+              totalIssues > 0
+                ? 'bg-red-500/10 border-red-500/30'
+                : 'bg-[#161b22] border-[#21262d]'
             }`}>
-              {totalIssues > 0 ? `${totalIssues} issue${totalIssues !== 1 ? 's' : ''}` : 'all clear'}
-            </span>
+              <span className={`w-2 h-2 rounded-full ${
+                totalIssues > 0 ? 'bg-red-500 pulse-dot' : 'bg-emerald-500'
+              }`}></span>
+              <span className={`text-xs font-mono ${
+                totalIssues > 0 ? 'text-red-400' : 'text-[#7d8590]'
+              }`}>
+                {totalIssues > 0 ? `${totalIssues} issue${totalIssues !== 1 ? 's' : ''}` : 'all clear'}
+              </span>
+            </div>
+
+            {/* New items indicator */}
+            {totalNewItems > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30">
+                <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                <span className="text-xs font-mono text-cyan-400">
+                  {totalNewItems} new ({newItemsHours}h)
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

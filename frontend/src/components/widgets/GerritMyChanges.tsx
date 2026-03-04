@@ -1,4 +1,4 @@
-import { useEffect, type JSX } from 'react';
+import { useEffect, useRef, type JSX } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
 import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, GerritChange } from '@dashboard/shared';
@@ -79,6 +79,8 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
   const baseQuery = 'owner:self (label:Code-Review<0 OR label:Verified<0)';
   const query = customQuery ? `${baseQuery} ${customQuery}` : baseQuery;
   const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
+  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
   const { data: changes, isLoading, error } = useGerritChanges({
     dataSourceId: widget.dataSourceId,
@@ -92,6 +94,20 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
     const count = changes?.length || 0;
     setWidgetIssueCount(widget.id, count);
   }, [changes, widget.id, setWidgetIssueCount]);
+
+  // Track new items (created within newItemsHours)
+  const prevNewCountRef = useRef<number>(-1);
+  useEffect(() => {
+    if (changes) {
+      const cutoffTime = new Date();
+      cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
+      const newCount = changes.filter((c) => new Date(c.created) >= cutoffTime).length;
+      if (newCount !== prevNewCountRef.current) {
+        prevNewCountRef.current = newCount;
+        setWidgetNewItemCount(widget.id, newCount);
+      }
+    }
+  }, [changes, widget.id, newItemsHours, setWidgetNewItemCount]);
 
   if (isLoading) {
     return (

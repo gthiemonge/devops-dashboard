@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLaunchpadBugs } from '../../hooks/useLaunchpadBugs';
 import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, LaunchpadBugWithTask, LaunchpadBugStatus, LaunchpadBugImportance } from '@dashboard/shared';
@@ -81,6 +81,8 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
   const fetchTags = (widget.config.fetchTags as boolean) || false;
   const displayFields = (widget.config.displayFields as string[]) || ['title', 'status', 'id'];
   const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
+  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
   const { data: bugs, isLoading, error } = useLaunchpadBugs({
     dataSourceId: widget.dataSourceId,
@@ -95,6 +97,20 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
   useEffect(() => {
     setWidgetIssueCount(widget.id, bugs?.length || 0);
   }, [bugs?.length, widget.id, setWidgetIssueCount]);
+
+  // Track new items (created within newItemsHours)
+  const prevNewCountRef = useRef<number>(-1);
+  useEffect(() => {
+    if (bugs) {
+      const cutoffTime = new Date();
+      cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
+      const newCount = bugs.filter((b) => new Date(b.date_created) >= cutoffTime).length;
+      if (newCount !== prevNewCountRef.current) {
+        prevNewCountRef.current = newCount;
+        setWidgetNewItemCount(widget.id, newCount);
+      }
+    }
+  }, [bugs, widget.id, newItemsHours, setWidgetNewItemCount]);
 
   if (isLoading) {
     return (

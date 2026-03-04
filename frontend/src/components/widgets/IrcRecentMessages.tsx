@@ -1,5 +1,6 @@
-import type { JSX } from 'react';
+import { useEffect, useRef, type JSX } from 'react';
 import { useIrcMessages } from '../../hooks/useIrcMessages';
+import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, IrcMessage } from '@dashboard/shared';
 
 interface IrcRecentMessagesProps {
@@ -140,6 +141,8 @@ function DateDivider({ date }: { date: string }) {
 export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
   const channel = (widget.config.channel as string) || '';
   const limit = (widget.config.limit as number) || 20;
+  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
   const { data, isLoading, error } = useIrcMessages({
     dataSourceId: widget.dataSourceId,
@@ -148,6 +151,22 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
     refreshInterval: widget.refreshInterval,
     enabled: !!channel,
   });
+
+  const messages = data?.messages || [];
+
+  // Track new items (posted within newItemsHours)
+  const prevNewCountRef = useRef<number>(-1);
+  useEffect(() => {
+    if (data?.messages) {
+      const cutoffTime = new Date();
+      cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
+      const newCount = data.messages.filter((m) => new Date(m.timestamp) >= cutoffTime).length;
+      if (newCount !== prevNewCountRef.current) {
+        prevNewCountRef.current = newCount;
+        setWidgetNewItemCount(widget.id, newCount);
+      }
+    }
+  }, [data, widget.id, newItemsHours, setWidgetNewItemCount]);
 
   if (!channel) {
     return <div className="text-[#7d8590] text-xs font-mono">Configure a channel</div>;
@@ -169,8 +188,6 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
       </div>
     );
   }
-
-  const messages = data?.messages || [];
 
   if (messages.length === 0) {
     return <div className="text-[#7d8590] text-xs font-mono">No recent messages</div>;

@@ -15,6 +15,7 @@ export function DashboardTabs() {
     stopRenamingDashboard,
     widgets,
     widgetIssueCounts,
+    widgetNewItemCounts,
   } = useDashboardStore();
 
   const createDashboard = useCreateDashboard();
@@ -125,6 +126,14 @@ export function DashboardTabs() {
           : dashboard.attentionCount || 0;
         const hasIssues = issueCount > 0;
 
+        // Calculate new items count for this dashboard
+        const newItemCount = isActive
+          ? widgets
+              .filter((w) => w.dashboardId === dashboard.id)
+              .reduce((sum, w) => sum + (widgetNewItemCounts[w.id] || 0), 0)
+          : 0;
+        const hasNewItems = newItemCount > 0;
+
         return (
           <div
             key={dashboard.id}
@@ -160,16 +169,24 @@ export function DashboardTabs() {
 
                 <span className="truncate max-w-28 font-mono">{dashboard.name}</span>
 
-                {/* Badge - show issue count if any, otherwise widget count */}
-                {hasIssues ? (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
-                    {issueCount}
-                  </span>
-                ) : dashboard.widgetCount > 0 ? (
-                  <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#21262d] text-[#7d8590] font-mono">
-                    {dashboard.widgetCount}
-                  </span>
-                ) : null}
+                {/* Badges - show issues, new items, or widget count */}
+                <div className="flex items-center gap-1">
+                  {hasIssues && (
+                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
+                      {issueCount}
+                    </span>
+                  )}
+                  {hasNewItems && (
+                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
+                      +{newItemCount}
+                    </span>
+                  )}
+                  {!hasIssues && !hasNewItems && dashboard.widgetCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#21262d] text-[#7d8590] font-mono">
+                      {dashboard.widgetCount}
+                    </span>
+                  )}
+                </div>
               </>
             )}
 

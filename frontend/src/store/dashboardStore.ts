@@ -14,6 +14,10 @@ interface DashboardState {
   // Issue tracking per widget
   widgetIssueCounts: Record<number, number>;
 
+  // New items tracking per widget
+  widgetNewItemCounts: Record<number, number>;
+  newItemsHours: number;
+
   // UI state
   isSettingsOpen: boolean;
   isWidgetPickerOpen: boolean;
@@ -46,6 +50,11 @@ interface DashboardState {
   setWidgetIssueCount: (widgetId: number, count: number) => void;
   getIssueCountForDashboard: (dashboardId: number) => number;
 
+  // New items tracking actions
+  setWidgetNewItemCount: (widgetId: number, count: number) => void;
+  getNewItemCountForDashboard: (dashboardId: number) => number;
+  setNewItemsHours: (hours: number) => void;
+
   // UI actions
   openSettings: () => void;
   closeSettings: () => void;
@@ -62,6 +71,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   layout: [],
   dataSources: [],
   widgetIssueCounts: {},
+  widgetNewItemCounts: {},
+  newItemsHours: 4,
   isSettingsOpen: false,
   isWidgetPickerOpen: false,
   editingWidgetId: null,
@@ -167,6 +178,22 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       .map((w) => w.id);
     return widgetIds.reduce((sum, id) => sum + (state.widgetIssueCounts[id] || 0), 0);
   },
+
+  // New items tracking actions
+  setWidgetNewItemCount: (widgetId, count) =>
+    set((state) => ({
+      widgetNewItemCounts: { ...state.widgetNewItemCounts, [widgetId]: count },
+    })),
+
+  getNewItemCountForDashboard: (dashboardId) => {
+    const state = get();
+    const widgetIds = state.widgets
+      .filter((w) => w.dashboardId === dashboardId)
+      .map((w) => w.id);
+    return widgetIds.reduce((sum, id) => sum + (state.widgetNewItemCounts[id] || 0), 0);
+  },
+
+  setNewItemsHours: (hours) => set({ newItemsHours: hours }),
 
   // UI actions
   openSettings: () => set({ isSettingsOpen: true }),

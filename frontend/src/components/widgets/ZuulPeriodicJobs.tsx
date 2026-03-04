@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useZuulBuilds } from '../../hooks/useZuulBuilds';
 import { useDashboardStore } from '../../store/dashboardStore';
 import type { Widget, ZuulBuild } from '@dashboard/shared';
@@ -46,6 +46,8 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const limit = (widget.config.limit as number) || 10;
   const days = (widget.config.days as number) || 7;
   const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
+  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
   const failureResults = ['FAILURE', 'POST_FAILURE', 'RETRY_LIMIT'];
 
@@ -74,6 +76,18 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   useEffect(() => {
     setWidgetIssueCount(widget.id, builds.length);
   }, [builds.length, widget.id, setWidgetIssueCount]);
+
+  // Track new items (completed within newItemsHours)
+  const prevNewCountRef = useRef<number>(-1);
+  useEffect(() => {
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
+    const newCount = builds.filter((b) => new Date(b.end_time) >= cutoffTime).length;
+    if (newCount !== prevNewCountRef.current) {
+      prevNewCountRef.current = newCount;
+      setWidgetNewItemCount(widget.id, newCount);
+    }
+  }, [builds, widget.id, newItemsHours, setWidgetNewItemCount]);
 
   if (isLoading) {
     return (
