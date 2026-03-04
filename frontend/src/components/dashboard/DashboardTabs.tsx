@@ -16,6 +16,8 @@ export function DashboardTabs() {
     widgets,
     widgetIssueCounts,
     widgetNewItemCounts,
+    dashboardIssueCounts,
+    dashboardNewItemCounts,
   } = useDashboardStore();
 
   const createDashboard = useCreateDashboard();
@@ -118,12 +120,12 @@ export function DashboardTabs() {
 
         // Calculate issue count for this dashboard
         // For current dashboard, use live widget issue counts
-        // For other dashboards, we don't have live data (would need to fetch)
+        // For other dashboards, use stored dashboard-level counts
         const issueCount = isActive
           ? widgets
               .filter((w) => w.dashboardId === dashboard.id)
               .reduce((sum, w) => sum + (widgetIssueCounts[w.id] || 0), 0)
-          : dashboard.attentionCount || 0;
+          : dashboardIssueCounts[dashboard.id] ?? dashboard.attentionCount ?? 0;
         const hasIssues = issueCount > 0;
 
         // Calculate new items count for this dashboard
@@ -131,7 +133,7 @@ export function DashboardTabs() {
           ? widgets
               .filter((w) => w.dashboardId === dashboard.id)
               .reduce((sum, w) => sum + (widgetNewItemCounts[w.id] || 0), 0)
-          : 0;
+          : dashboardNewItemCounts[dashboard.id] ?? 0;
         const hasNewItems = newItemCount > 0;
 
         return (
@@ -169,24 +171,21 @@ export function DashboardTabs() {
 
                 <span className="truncate max-w-28 font-mono">{dashboard.name}</span>
 
-                {/* Badges - show issues, new items, or widget count */}
-                <div className="flex items-center gap-1">
-                  {hasIssues && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
-                      {issueCount}
-                    </span>
-                  )}
-                  {hasNewItems && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
-                      +{newItemCount}
-                    </span>
-                  )}
-                  {!hasIssues && !hasNewItems && dashboard.widgetCount > 0 && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-[#21262d] text-[#7d8590] font-mono">
-                      {dashboard.widgetCount}
-                    </span>
-                  )}
-                </div>
+                {/* Badges - show issues and new items */}
+                {(hasIssues || hasNewItems) && (
+                  <div className="flex items-center gap-1">
+                    {hasIssues && (
+                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
+                        {issueCount}
+                      </span>
+                    )}
+                    {hasNewItems && (
+                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
+                        +{newItemCount}
+                      </span>
+                    )}
+                  </div>
+                )}
               </>
             )}
 

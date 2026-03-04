@@ -18,6 +18,10 @@ interface DashboardState {
   widgetNewItemCounts: Record<number, number>;
   newItemsHours: number;
 
+  // Dashboard-level counts (persist across tab switches)
+  dashboardIssueCounts: Record<number, number>;
+  dashboardNewItemCounts: Record<number, number>;
+
   // UI state
   isSettingsOpen: boolean;
   isWidgetPickerOpen: boolean;
@@ -55,6 +59,9 @@ interface DashboardState {
   getNewItemCountForDashboard: (dashboardId: number) => number;
   setNewItemsHours: (hours: number) => void;
 
+  // Dashboard-level count actions
+  updateDashboardCounts: () => void;
+
   // UI actions
   openSettings: () => void;
   closeSettings: () => void;
@@ -73,6 +80,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   widgetIssueCounts: {},
   widgetNewItemCounts: {},
   newItemsHours: 4,
+  dashboardIssueCounts: {},
+  dashboardNewItemCounts: {},
   isSettingsOpen: false,
   isWidgetPickerOpen: false,
   editingWidgetId: null,
@@ -164,10 +173,13 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   setDataSources: (dataSources) => set({ dataSources }),
 
   // Issue tracking actions
-  setWidgetIssueCount: (widgetId, count) =>
+  setWidgetIssueCount: (widgetId, count) => {
     set((state) => ({
       widgetIssueCounts: { ...state.widgetIssueCounts, [widgetId]: count },
-    })),
+    }));
+    // Update dashboard-level counts
+    get().updateDashboardCounts();
+  },
 
   getIssueCountForDashboard: (dashboardId) => {
     const state = get();
@@ -180,10 +192,13 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   // New items tracking actions
-  setWidgetNewItemCount: (widgetId, count) =>
+  setWidgetNewItemCount: (widgetId, count) => {
     set((state) => ({
       widgetNewItemCounts: { ...state.widgetNewItemCounts, [widgetId]: count },
-    })),
+    }));
+    // Update dashboard-level counts
+    get().updateDashboardCounts();
+  },
 
   getNewItemCountForDashboard: (dashboardId) => {
     const state = get();
@@ -194,6 +209,31 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   setNewItemsHours: (hours) => set({ newItemsHours: hours }),
+
+  // Dashboard-level count actions
+  updateDashboardCounts: () => {
+    const state = get();
+    if (!state.currentDashboardId) return;
+
+    const dashboardId = state.currentDashboardId;
+    const widgetIds = state.widgets
+      .filter((w) => w.dashboardId === dashboardId)
+      .map((w) => w.id);
+
+    const issueTotal = widgetIds.reduce(
+      (sum, id) => sum + (state.widgetIssueCounts[id] || 0),
+      0
+    );
+    const newItemTotal = widgetIds.reduce(
+      (sum, id) => sum + (state.widgetNewItemCounts[id] || 0),
+      0
+    );
+
+    set({
+      dashboardIssueCounts: { ...state.dashboardIssueCounts, [dashboardId]: issueTotal },
+      dashboardNewItemCounts: { ...state.dashboardNewItemCounts, [dashboardId]: newItemTotal },
+    });
+  },
 
   // UI actions
   openSettings: () => set({ isSettingsOpen: true }),
