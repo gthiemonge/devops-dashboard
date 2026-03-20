@@ -2,6 +2,8 @@
 
 A modular dashboard for tracking development work across Gerrit, Zuul, and other platforms.
 
+![Dashboard Screenshot](images/screenshot.png)
+
 ## Quick Start
 
 ```bash
