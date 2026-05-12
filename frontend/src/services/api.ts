@@ -138,6 +138,7 @@ export const proxyApi = {
     limit?: number;
     sortBy?: 'id' | 'status' | 'importance';
     fetchTags?: boolean;
+    tags?: string[];
   }) => {
     const searchParams = new URLSearchParams();
     if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
@@ -148,6 +149,9 @@ export const proxyApi = {
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.sortBy) searchParams.append('sortBy', params.sortBy);
     if (params.fetchTags) searchParams.append('fetchTags', 'true');
+    if (params.tags && params.tags.length > 0) {
+      searchParams.append('tags', params.tags.join(','));
+    }
     return request<LaunchpadBugWithTask[]>(`/proxy/launchpad/bugs?${searchParams.toString()}`);
   },
 };

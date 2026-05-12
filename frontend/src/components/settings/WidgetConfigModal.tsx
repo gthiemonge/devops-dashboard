@@ -267,6 +267,17 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
               </div>
             </div>
             <div>
+              <label className={labelClass}>Filter by Tags (optional)</label>
+              <input
+                type="text"
+                value={(config.tags as string) || ''}
+                onChange={(e) => setConfig({ ...config, tags: e.target.value })}
+                className={inputClass}
+                placeholder="sdx-tn, sdx-tpm"
+              />
+              <p className="text-[10px] text-[#484f58] mt-1">Comma-separated tags - shows only bugs with ALL specified tags</p>
+            </div>
+            <div>
               <label className="flex items-center gap-2 text-xs text-[#7d8590]">
                 <input
                   type="checkbox"
