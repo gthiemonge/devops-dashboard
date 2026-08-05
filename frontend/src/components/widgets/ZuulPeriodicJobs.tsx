@@ -35,6 +35,12 @@ function getResultBadge(result: string): { label: string; className: string; bor
       return { label: 'POST', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30', borderClass: 'border-orange-500/50 hover:border-orange-500' };
     case 'RETRY_LIMIT':
       return { label: 'RETRY', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', borderClass: 'border-yellow-500/50 hover:border-yellow-500' };
+    case 'TIMED_OUT':
+      return { label: 'T/OUT', className: 'bg-purple-500/20 text-purple-400 border-purple-500/30', borderClass: 'border-purple-500/50 hover:border-purple-500' };
+    case 'NODE_FAILURE':
+      return { label: 'NODE', className: 'bg-rose-500/20 text-rose-400 border-rose-500/30', borderClass: 'border-rose-500/50 hover:border-rose-500' };
+    case 'ERROR':
+      return { label: 'ERR', className: 'bg-red-600/20 text-red-500 border-red-600/30', borderClass: 'border-red-600/50 hover:border-red-600' };
     default:
       return { label: result.slice(0, 4), className: 'bg-gray-500/20 text-gray-400 border-gray-500/30', borderClass: 'border-gray-500/50 hover:border-gray-500' };
   }
@@ -49,21 +55,21 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
   const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
-  const failureResults = ['FAILURE', 'POST_FAILURE', 'RETRY_LIMIT'];
+  const successResults = ['SUCCESS', 'SKIPPED', 'ABORTED'];
 
   const { data: rawBuilds, isLoading, error } = useZuulBuilds({
     dataSourceId: widget.dataSourceId,
     project,
     pipeline,
-    limit: limit * 5, // Fetch more to account for filtering
+    limit: limit * 20, // Fetch enough to find failures among successes
     refreshInterval: widget.refreshInterval,
   });
 
-  // Filter builds by result type, date, and limit
+  // Filter out successful builds, then apply date range and limit
   const builds = rawBuilds
     ? rawBuilds
         .filter((build) => {
-          if (!failureResults.includes(build.result)) return false;
+          if (successResults.includes(build.result)) return false;
           const buildDate = new Date(build.end_time);
           const cutoffDate = new Date();
           cutoffDate.setDate(cutoffDate.getDate() - days);

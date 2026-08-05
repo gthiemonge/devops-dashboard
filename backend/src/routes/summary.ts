@@ -76,10 +76,12 @@ async function getWidgetSummary(widget: Widget): Promise<WidgetSummary> {
       const pipeline = widget.config.pipeline as string || 'periodic';
       const limit = widget.config.limit as number || 10;
 
+      const successResults = ['SUCCESS', 'SKIPPED', 'ABORTED'];
       const cacheKey = `summary:zuul:${widget.id}:${project}:${pipeline}`;
-      const builds = await cacheService.getOrSet<ZuulBuild[]>(cacheKey, () =>
-        provider.getBuilds({ project, pipeline, result: 'FAILURE', limit }), 60
+      const allBuilds = await cacheService.getOrSet<ZuulBuild[]>(cacheKey, () =>
+        provider.getBuilds({ project, pipeline, limit: limit * 20 }), 60
       );
+      const builds = allBuilds.filter(b => !successResults.includes(b.result)).slice(0, limit);
 
       count = builds.length;
       urgent = builds.length;
