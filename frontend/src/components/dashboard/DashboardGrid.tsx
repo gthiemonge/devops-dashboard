@@ -8,7 +8,8 @@ import { WidgetContainer } from './WidgetContainer';
 import type { LayoutItem } from '@dashboard/shared';
 
 export function DashboardGrid() {
-  const { widgets, layout } = useDashboardStore();
+  const { widgets, layout, isDashboardLocked } = useDashboardStore();
+  const locked = isDashboardLocked();
   const updateLayout = useUpdateLayout();
 
   const gridLayout: Layout[] = useMemo(() => {
@@ -27,6 +28,7 @@ export function DashboardGrid() {
   }, [widgets, layout]);
 
   const handleLayoutChange = useCallback((newLayout: Layout[]) => {
+    if (locked) return;
     const items: LayoutItem[] = newLayout.map((l) => ({
       i: l.i,
       x: l.x,
@@ -37,7 +39,7 @@ export function DashboardGrid() {
       minH: l.minH,
     }));
     updateLayout.mutate(items);
-  }, [updateLayout]);
+  }, [updateLayout, locked]);
 
   if (widgets.length === 0) {
     return (
@@ -59,7 +61,8 @@ export function DashboardGrid() {
       containerPadding={[0, 0]}
       onLayoutChange={handleLayoutChange}
       draggableHandle=".widget-drag-handle"
-      isResizable={true}
+      isDraggable={!locked}
+      isResizable={!locked}
       compactType="vertical"
     >
       {widgets.map((widget) => (

@@ -22,6 +22,9 @@ interface DashboardState {
   dashboardIssueCounts: Record<number, number>;
   dashboardNewItemCounts: Record<number, number>;
 
+  // Lock state (per-dashboard, locked by default)
+  unlockedDashboardIds: Record<number, boolean>;
+
   // UI state
   isSettingsOpen: boolean;
   isWidgetPickerOpen: boolean;
@@ -62,6 +65,10 @@ interface DashboardState {
   // Dashboard-level count actions
   updateDashboardCounts: () => void;
 
+  // Lock actions
+  toggleDashboardLock: (id: number) => void;
+  isDashboardLocked: () => boolean;
+
   // UI actions
   openSettings: () => void;
   closeSettings: () => void;
@@ -82,6 +89,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   newItemsHours: 4,
   dashboardIssueCounts: {},
   dashboardNewItemCounts: {},
+  unlockedDashboardIds: {},
   isSettingsOpen: false,
   isWidgetPickerOpen: false,
   editingWidgetId: null,
@@ -233,6 +241,21 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       dashboardIssueCounts: { ...state.dashboardIssueCounts, [dashboardId]: issueTotal },
       dashboardNewItemCounts: { ...state.dashboardNewItemCounts, [dashboardId]: newItemTotal },
     });
+  },
+
+  // Lock actions
+  toggleDashboardLock: (id) =>
+    set((state) => ({
+      unlockedDashboardIds: {
+        ...state.unlockedDashboardIds,
+        [id]: !state.unlockedDashboardIds[id],
+      },
+    })),
+
+  isDashboardLocked: () => {
+    const state = get();
+    if (!state.currentDashboardId) return true;
+    return !state.unlockedDashboardIds[state.currentDashboardId];
   },
 
   // UI actions

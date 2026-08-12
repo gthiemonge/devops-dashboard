@@ -2,7 +2,8 @@ import { useDashboardStore } from '../../store/dashboardStore';
 import { DashboardTabs } from '../dashboard/DashboardTabs';
 
 export function Header() {
-  const { openSettings, openWidgetPicker, widgetIssueCounts, widgetNewItemCounts, newItemsHours } = useDashboardStore();
+  const { openSettings, openWidgetPicker, widgetIssueCounts, widgetNewItemCounts, newItemsHours, isDashboardLocked } = useDashboardStore();
+  const locked = isDashboardLocked();
 
   // Calculate totals from all tracked widgets
   const totalIssues = Object.values(widgetIssueCounts).reduce((sum, count) => sum + count, 0);
@@ -63,7 +64,12 @@ export function Header() {
         <div className="flex items-center gap-2">
           <button
             onClick={openWidgetPicker}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded text-xs font-medium transition-colors"
+            disabled={locked}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              locked
+                ? 'bg-[#21262d] text-[#484f58] cursor-not-allowed'
+                : 'bg-cyan-600 hover:bg-cyan-500 text-white'
+            }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />

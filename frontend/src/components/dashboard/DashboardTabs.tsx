@@ -18,6 +18,8 @@ export function DashboardTabs() {
     widgetNewItemCounts,
     dashboardIssueCounts,
     dashboardNewItemCounts,
+    toggleDashboardLock,
+    isDashboardLocked,
   } = useDashboardStore();
 
   const createDashboard = useCreateDashboard();
@@ -243,6 +245,28 @@ export function DashboardTabs() {
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
+        </button>
+
+        {/* Lock/Unlock dashboard */}
+        <button
+          onClick={() => currentDashboardId && toggleDashboardLock(currentDashboardId)}
+          disabled={!currentDashboardId}
+          className={`p-1.5 rounded transition-colors ${
+            isDashboardLocked()
+              ? 'text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22]'
+              : 'text-cyan-400 hover:text-cyan-300 hover:bg-[#161b22]'
+          }`}
+          title={isDashboardLocked() ? 'Unlock dashboard (enable editing)' : 'Lock dashboard (prevent editing)'}
+        >
+          {isDashboardLocked() ? (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0zm-2 7a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
+            </svg>
+          )}
         </button>
 
         {/* Hidden file input for import */}
