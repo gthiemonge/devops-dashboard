@@ -7,6 +7,7 @@ export interface LaunchpadBugsQuery {
   limit?: number;
   sortBy?: 'id' | 'status' | 'importance';
   fetchTags?: boolean;
+  tags?: string[];
 }
 
 interface LaunchpadCollectionResponse {
@@ -54,7 +55,7 @@ export class LaunchpadProvider extends BaseProvider {
   }
 
   async getBugTasks(query: LaunchpadBugsQuery): Promise<LaunchpadBugWithTask[]> {
-    const { project, statuses, limit = 10, sortBy = 'id', fetchTags = false } = query;
+    const { project, statuses, limit = 10, sortBy = 'id', fetchTags = false, tags } = query;
 
     const params = new URLSearchParams();
     params.append('ws.op', 'searchTasks');
@@ -91,13 +92,30 @@ export class LaunchpadProvider extends BaseProvider {
     // Sort tasks
     tasks = this.sortTasks(tasks, sortBy);
 
-    // Limit results
-    tasks = tasks.slice(0, limit);
+    // If tags filter is specified, we need to fetch bug details for all tasks before limiting
+    // to ensure we don't miss bugs with the required tags
+    const needsFetchTags = fetchTags || (tags && tags.length > 0);
 
-    // Optionally fetch bug details for tags
-    if (fetchTags && tasks.length > 0) {
-      tasks = await this.enrichWithBugDetails(tasks);
+    if (needsFetchTags && tasks.length > 0) {
+      // Fetch more tasks if filtering by tags to account for filtering
+      const fetchLimit = tags && tags.length > 0 ? Math.min(tasks.length, limit * 3) : tasks.length;
+      const tasksToEnrich = tasks.slice(0, fetchLimit);
+      tasks = await this.enrichWithBugDetails(tasksToEnrich);
+
+      // Filter by tags if specified
+      if (tags && tags.length > 0) {
+        tasks = tasks.filter((task) => {
+          if (!task.bug?.tags) return false;
+          // Check if the bug has all the required tags
+          return tags.every((requiredTag) =>
+            task.bug!.tags.some((bugTag) => bugTag.toLowerCase() === requiredTag.toLowerCase())
+          );
+        });
+      }
     }
+
+    // Limit results after filtering
+    tasks = tasks.slice(0, limit);
 
     return tasks;
   }

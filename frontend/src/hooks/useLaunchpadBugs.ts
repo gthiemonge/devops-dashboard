@@ -9,6 +9,7 @@ interface UseLaunchpadBugsOptions {
   limit?: number;
   sortBy?: 'id' | 'status' | 'importance';
   fetchTags?: boolean;
+  tags?: string[];
   refreshInterval?: number;
   enabled?: boolean;
 }
@@ -23,6 +24,7 @@ export function useLaunchpadBugs(options: UseLaunchpadBugsOptions) {
       options.limit,
       options.sortBy,
       options.fetchTags,
+      options.tags,
     ],
     queryFn: () =>
       proxyApi.getLaunchpadBugs({
@@ -32,6 +34,7 @@ export function useLaunchpadBugs(options: UseLaunchpadBugsOptions) {
         limit: options.limit,
         sortBy: options.sortBy,
         fetchTags: options.fetchTags,
+        tags: options.tags,
       }),
     refetchInterval: options.refreshInterval ? options.refreshInterval * 1000 : undefined,
     enabled: options.enabled !== false && !!options.project,

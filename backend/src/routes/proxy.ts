@@ -136,6 +136,7 @@ proxyRouter.get('/launchpad/bugs', async (req: Request, res: Response) => {
     const dataSourceId = parseInt(req.query.dataSourceId as string) || 4;
     const project = req.query.project as string;
     const statusesParam = req.query.statuses as string;
+    const tagsParam = req.query.tags as string;
     const limit = parseInt(req.query.limit as string) || 10;
     const sortBy = (req.query.sortBy as 'id' | 'status' | 'importance') || 'id';
     const fetchTags = req.query.fetchTags === 'true';
@@ -159,10 +160,14 @@ proxyRouter.get('/launchpad/bugs', async (req: Request, res: Response) => {
       ? (statusesParam.split(',') as LaunchpadBugStatus[])
       : undefined;
 
-    const cacheKey = `launchpad:bugs:${dataSourceId}:${project}:${statusesParam || 'default'}:${sortBy}:${limit}:${fetchTags}`;
+    const tags = tagsParam
+      ? tagsParam.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
+      : undefined;
+
+    const cacheKey = `launchpad:bugs:${dataSourceId}:${project}:${statusesParam || 'default'}:${sortBy}:${limit}:${fetchTags}:${tagsParam || 'no-tags'}`;
 
     const bugs = await cacheService.getOrSet<LaunchpadBugWithTask[]>(cacheKey, () =>
-      provider.getBugTasks({ project, statuses, limit, sortBy, fetchTags })
+      provider.getBugTasks({ project, statuses, limit, sortBy, fetchTags, tags })
     );
 
     const response: ApiResponse<LaunchpadBugWithTask[]> = { success: true, data: bugs };

@@ -84,6 +84,16 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
   const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
   const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
+  // Parse tags from config - can be string (comma-separated) or array
+  let tags: string[] | undefined;
+  if (widget.config.tags) {
+    if (typeof widget.config.tags === 'string') {
+      tags = widget.config.tags.split(',').map((t) => t.trim()).filter((t) => t.length > 0);
+    } else if (Array.isArray(widget.config.tags)) {
+      tags = widget.config.tags.filter((t) => t && t.length > 0);
+    }
+  }
+
   const { data: bugs, isLoading, error } = useLaunchpadBugs({
     dataSourceId: widget.dataSourceId,
     project,
@@ -91,6 +101,7 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
     limit,
     sortBy,
     fetchTags,
+    tags,
     refreshInterval: widget.refreshInterval,
   });
 
