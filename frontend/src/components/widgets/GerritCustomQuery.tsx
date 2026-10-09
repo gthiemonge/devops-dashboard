@@ -2,6 +2,7 @@ import { useEffect, useRef, type JSX } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
+import { MergeConflictChip } from './MergeConflictChip';
 import type { Widget, GerritChange } from '@dashboard/shared';
 
 interface GerritCustomQueryProps {
@@ -171,6 +172,7 @@ export function GerritCustomQuery({ widget }: GerritCustomQueryProps) {
               </div>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
+              <MergeConflictChip change={change} />
               {getLabelBadges(change, 'Code-Review')}
               {getLabelBadges(change, 'Verified')}
               {getLabelBadges(change, 'Workflow')}
