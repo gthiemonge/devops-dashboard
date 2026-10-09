@@ -11,6 +11,14 @@ import type { LayoutItem } from '@dashboard/shared';
 // includes the vertical scrollbar and makes the grid overflow the page.
 const AutoWidthGridLayout = WidthProvider(GridLayout);
 
+function sameLayout(a: LayoutItem[], b: LayoutItem[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((item) => {
+    const other = b.find((l) => l.i === item.i);
+    return !!other && other.x === item.x && other.y === item.y && other.w === item.w && other.h === item.h;
+  });
+}
+
 export function DashboardGrid() {
   const { widgets, layout, isDashboardLocked } = useDashboardStore();
   const locked = isDashboardLocked();
@@ -42,8 +50,10 @@ export function DashboardGrid() {
       minW: l.minW,
       minH: l.minH,
     }));
+    // The grid reports its layout after every render; only save real changes
+    if (sameLayout(items, layout)) return;
     updateLayout.mutate(items);
-  }, [updateLayout, locked]);
+  }, [updateLayout, locked, layout]);
 
   if (widgets.length === 0) {
     return (

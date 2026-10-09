@@ -59,10 +59,14 @@ export function useCreateWidget() {
     }),
     onSuccess: (widget) => {
       addWidget(widget);
+      // Place the widget below the existing ones. Don't use y: Infinity, it is
+      // saved as null and then read back as 0, which makes the grid move the
+      // widget back and forth between the top and the bottom.
+      const bottom = layout.reduce((max, l) => Math.max(max, l.y + l.h), 0);
       const newLayoutItem: LayoutItem = {
         i: widget.id.toString(),
         x: (layout.length * 4) % 12,
-        y: Infinity,
+        y: bottom,
         w: 4,
         h: 3,
         minW: 2,
@@ -133,7 +137,9 @@ export function useUpdateLayout() {
       }
       return Promise.resolve(null);
     },
-    onSuccess: (_, items) => {
+    // Update the store right away rather than when the request completes:
+    // responses can arrive out of order and would revert to an older layout.
+    onMutate: (items) => {
       setLayout(items);
       if (currentDashboardId) {
         updateDashboard(currentDashboardId, { layout: items });
