@@ -43,7 +43,7 @@ dashboard/
 ## Features
 
 - **Drag-and-drop dashboard**: Arrange widgets freely with react-grid-layout
-- **Gerrit widgets**: Recent changes, my changes needing attention
+- **Gerrit widgets**: Recent changes, my changes needing attention, custom queries
 - **Zuul widgets**: Failed periodic jobs
 - **Configurable data sources**: Add multiple Gerrit/Zuul instances
 - **Optional authentication**: Store credentials for authenticated Gerrit access

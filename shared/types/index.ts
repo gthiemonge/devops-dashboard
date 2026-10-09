@@ -20,7 +20,7 @@ export interface Credential {
 }
 
 // Widget Types
-export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'zuul_periodic_jobs' | 'irc_recent_messages' | 'launchpad_bugs';
+export type WidgetType = 'gerrit_recent_changes' | 'gerrit_my_changes' | 'gerrit_user_changes' | 'gerrit_custom_query' | 'zuul_periodic_jobs' | 'irc_recent_messages' | 'launchpad_bugs';
 
 export interface Widget {
   id: number;

@@ -181,6 +181,22 @@ export function WidgetConfigModal({ widgetId }: WidgetConfigModalProps) {
           </>
         )}
 
+        {widget.type === 'gerrit_custom_query' && (
+          <>
+            <div>
+              <label className={labelClass}>Query</label>
+              <textarea
+                value={(config.query as string) || ''}
+                onChange={(e) => setConfig({ ...config, query: e.target.value })}
+                className={inputClass}
+                rows={3}
+                placeholder="project:openstack/octavia status:open -is:wip"
+              />
+              <p className="text-[10px] text-[#484f58] mt-1">Any Gerrit search query, used as-is</p>
+            </div>
+          </>
+        )}
+
         {widget.type === 'irc_recent_messages' && (
           <div>
             <label className={labelClass}>Channel</label>

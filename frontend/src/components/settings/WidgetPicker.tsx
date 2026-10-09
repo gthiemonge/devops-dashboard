@@ -43,6 +43,15 @@ const widgetTypes: WidgetTypeOption[] = [
     defaultConfig: { owner: '', limit: 10, message: '' },
   },
   {
+    type: 'gerrit_custom_query',
+    name: 'Custom Query',
+    description: 'Changes matching any Gerrit query',
+    sourceType: 'gerrit',
+    icon: 'gerrit',
+    color: 'emerald',
+    defaultConfig: { query: 'status:open', limit: 10 },
+  },
+  {
     type: 'zuul_periodic_jobs',
     name: 'Failed Jobs',
     description: 'Failed Zuul periodic jobs',
@@ -91,6 +100,8 @@ function generateTitle(type: WidgetType, config: Record<string, unknown>): strin
       return 'My Changes';
     case 'gerrit_user_changes':
       return owner ? `Changes: ${owner}` : "User's Changes";
+    case 'gerrit_custom_query':
+      return ((config.query as string) || '').replace(/\s+/g, ' ').trim() || 'Custom Query';
     case 'zuul_periodic_jobs':
       return shortProject ? `Zuul: ${shortProject}` : 'Zuul Periodic';
     case 'irc_recent_messages':
@@ -110,10 +121,12 @@ export function WidgetPicker() {
   const createWidget = useCreateWidget();
   const [selectedType, setSelectedType] = useState<WidgetTypeOption | null>(null);
   const [config, setConfig] = useState<Record<string, unknown>>({});
+  const [title, setTitle] = useState('');
 
   const handleSelectType = (type: WidgetTypeOption) => {
     setSelectedType(type);
     setConfig(type.defaultConfig);
+    setTitle('');
   };
 
   const handleCreate = () => {
@@ -127,7 +140,7 @@ export function WidgetPicker() {
 
     const dto: CreateWidgetDto = {
       type: selectedType.type,
-      title: generateTitle(selectedType.type, config),
+      title: title.trim() || generateTitle(selectedType.type, config),
       dataSourceId: dataSource.id,
       config,
       refreshInterval: 300,
@@ -233,6 +246,33 @@ export function WidgetPicker() {
                   placeholder="DNM, WIP, fix bug"
                 />
                 <p className="text-[10px] text-[#484f58] mt-1">Full-text search in commit message</p>
+              </div>
+            </>
+          )}
+
+          {selectedType.type === 'gerrit_custom_query' && (
+            <>
+              <div>
+                <label className={labelClass}>Title (optional)</label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className={inputClass}
+                  placeholder="Octavia reviews"
+                />
+                <p className="text-[10px] text-[#484f58] mt-1">Shown in the widget header (defaults to the query)</p>
+              </div>
+              <div>
+                <label className={labelClass}>Query</label>
+                <textarea
+                  value={(config.query as string) || ''}
+                  onChange={(e) => setConfig({ ...config, query: e.target.value })}
+                  className={inputClass}
+                  rows={3}
+                  placeholder="project:openstack/octavia status:open -is:wip"
+                />
+                <p className="text-[10px] text-[#484f58] mt-1">Any Gerrit search query, used as-is</p>
               </div>
             </>
           )}

@@ -4,6 +4,7 @@ import { useDeleteWidget } from '../../hooks/useWidgets';
 import { GerritRecentChanges } from '../widgets/GerritRecentChanges';
 import { GerritMyChanges } from '../widgets/GerritMyChanges';
 import { GerritUserChanges } from '../widgets/GerritUserChanges';
+import { GerritCustomQuery } from '../widgets/GerritCustomQuery';
 import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
 import { IrcRecentMessages } from '../widgets/IrcRecentMessages';
 import { LaunchpadBugs } from '../widgets/LaunchpadBugs';
@@ -61,6 +62,11 @@ function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig): string
     return query ? `${baseUrl}${baseQuery}+${encodeURIComponent(query)}` : `${baseUrl}${baseQuery}`;
   }
 
+  if (type === 'gerrit_custom_query') {
+    const query = ((config.query as string) || '').replace(/\s+/g, ' ').trim();
+    return query ? `${baseUrl}${encodeURIComponent(query)}` : null;
+  }
+
   if (type === 'gerrit_my_changes') {
     return `${baseUrl}owner:self+(label:Code-Review<0+OR+label:Verified<0)`;
   }
@@ -79,6 +85,7 @@ function getWidgetIcon(type: WidgetType): JSX.Element {
     case 'gerrit_recent_changes':
     case 'gerrit_my_changes':
     case 'gerrit_user_changes':
+    case 'gerrit_custom_query':
       return (
         <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
@@ -116,6 +123,7 @@ function getWidgetColor(type: WidgetType): string {
     case 'gerrit_recent_changes':
     case 'gerrit_my_changes':
     case 'gerrit_user_changes':
+    case 'gerrit_custom_query':
       return 'text-emerald-400';
     case 'zuul_periodic_jobs':
       return 'text-amber-400';
@@ -165,7 +173,9 @@ interface WidgetContainerProps {
 }
 
 export function WidgetContainer({ widget }: WidgetContainerProps) {
-  const title = generateTitle(widget.type, widget.config);
+  const title = widget.type === 'gerrit_custom_query'
+    ? widget.title
+    : generateTitle(widget.type, widget.config);
   const searchUrl = widget.type === 'launchpad_bugs'
     ? generateLaunchpadSearchUrl(widget.config)
     : generateGerritSearchUrl(widget.type, widget.config);
@@ -188,6 +198,8 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
         return <GerritMyChanges widget={widget} />;
       case 'gerrit_user_changes':
         return <GerritUserChanges widget={widget} />;
+      case 'gerrit_custom_query':
+        return <GerritCustomQuery widget={widget} />;
       case 'zuul_periodic_jobs':
         return <ZuulPeriodicJobs widget={widget} />;
       case 'irc_recent_messages':
