@@ -45,6 +45,12 @@
   border-radius: 3px;
 }
 
+/* Always reserve the scrollbar space so the grid width never changes when
+   the page scrollbar appears or disappears */
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

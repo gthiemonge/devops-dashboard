@@ -1,11 +1,15 @@
 import { useMemo, useCallback } from 'react';
-import GridLayout, { Layout } from 'react-grid-layout';
+import GridLayout, { Layout, WidthProvider } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { useUpdateLayout } from '../../hooks/useWidgets';
 import { WidgetContainer } from './WidgetContainer';
 import type { LayoutItem } from '@dashboard/shared';
+
+// Size the grid from its container instead of window.innerWidth, which
+// includes the vertical scrollbar and makes the grid overflow the page.
+const AutoWidthGridLayout = WidthProvider(GridLayout);
 
 export function DashboardGrid() {
   const { widgets, layout, isDashboardLocked } = useDashboardStore();
@@ -51,12 +55,11 @@ export function DashboardGrid() {
   }
 
   return (
-    <GridLayout
+    <AutoWidthGridLayout
       className="layout"
       layout={gridLayout}
       cols={12}
       rowHeight={100}
-      width={window.innerWidth}
       margin={[0, 0]}
       containerPadding={[0, 0]}
       onLayoutChange={handleLayoutChange}
@@ -70,6 +73,6 @@ export function DashboardGrid() {
           <WidgetContainer widget={widget} />
         </div>
       ))}
-    </GridLayout>
+    </AutoWidthGridLayout>
   );
 }
