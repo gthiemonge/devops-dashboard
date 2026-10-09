@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLaunchpadBugs } from '../../hooks/useLaunchpadBugs';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
 import type { Widget, LaunchpadBugWithTask, LaunchpadBugStatus, LaunchpadBugImportance } from '@dashboard/shared';
 
 interface LaunchpadBugsProps {
@@ -153,9 +154,13 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
 
   const showField = (field: string) => displayFields.includes(field);
 
+  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
+
   return (
     <div className="space-y-0.5">
-      {bugs.map((bug: LaunchpadBugWithTask) => (
+      {bugs.map((bug: LaunchpadBugWithTask) => {
+        const isNew = new Date(bug.date_created) >= newItemsCutoff;
+        return (
         <a
           key={bug.bug_id}
           href={bug.web_link}
@@ -167,10 +172,12 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
             <div className="flex-1 min-w-0">
               {showField('title') && (
                 <p className="text-xs text-[#e6edf3] truncate group-hover:text-orange-400 transition-colors font-mono">
+                  {isNew && <NewItemDot />}
                   {bug.title.replace(/^Bug #\d+( in [^:]+)?:\s*"?|"$/g, '')}
                 </p>
               )}
               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                {isNew && !showField('title') && <NewItemDot />}
                 {showField('id') && (
                   <>
                     <span className="text-[10px] text-orange-400/70 font-mono">
@@ -222,7 +229,8 @@ export function LaunchpadBugs({ widget }: LaunchpadBugsProps) {
             </span>
           </div>
         </a>
-      ))}
+        );
+      })}
     </div>
   );
 }

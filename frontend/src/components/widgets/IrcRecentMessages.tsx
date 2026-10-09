@@ -1,6 +1,7 @@
 import { useEffect, useRef, type JSX } from 'react';
 import { useIrcMessages } from '../../hooks/useIrcMessages';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
 import type { Widget, IrcMessage } from '@dashboard/shared';
 
 interface IrcRecentMessagesProps {
@@ -63,7 +64,7 @@ function renderMessageContent(message: string): JSX.Element {
   );
 }
 
-function MessageBubble({ msg, isConsecutive }: { msg: IrcMessage; isConsecutive: boolean }) {
+function MessageBubble({ msg, isConsecutive, isNew }: { msg: IrcMessage; isConsecutive: boolean; isNew: boolean }) {
   const avatarColor = getAvatarColor(msg.nick);
   const isBot = msg.nick.toLowerCase().includes('bot') || msg.nick === 'opendevreview';
   const isAction = msg.type === 'action';
@@ -71,6 +72,7 @@ function MessageBubble({ msg, isConsecutive }: { msg: IrcMessage; isConsecutive:
   if (isAction) {
     return (
       <div className="flex items-center gap-2 py-0.5 px-2 text-[#7d8590] text-[10px] italic font-mono">
+        {isNew && <NewItemDot />}
         <span className="text-[#484f58]">*</span>
         <span style={{ color: avatarColor }}>{msg.nick}</span>
         <span>{msg.message}</span>
@@ -109,6 +111,7 @@ function MessageBubble({ msg, isConsecutive }: { msg: IrcMessage; isConsecutive:
             isBot ? 'text-[#484f58]' : 'text-[#e6edf3]'
           }`}
         >
+          {isNew && <NewItemDot />}
           {renderMessageContent(msg.message)}
         </div>
       </div>
@@ -193,6 +196,7 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
     return <div className="text-[#7d8590] text-xs font-mono">No recent messages</div>;
   }
 
+  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
   let currentDate = '';
   let lastNick = '';
 
@@ -208,7 +212,7 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
         return (
           <div key={msg.id || idx}>
             {showDateDivider && <DateDivider date={msg.date} />}
-            <MessageBubble msg={msg} isConsecutive={isConsecutive} />
+            <MessageBubble msg={msg} isConsecutive={isConsecutive} isNew={new Date(msg.timestamp) >= newItemsCutoff} />
           </div>
         );
       })}

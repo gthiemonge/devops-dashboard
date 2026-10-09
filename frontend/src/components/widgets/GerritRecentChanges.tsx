@@ -1,6 +1,7 @@
 import { useEffect, useRef, type JSX } from 'react';
 import { useGerritChanges } from '../../hooks/useGerritChanges';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
 import type { Widget, GerritChange } from '@dashboard/shared';
 
 interface GerritRecentChangesProps {
@@ -162,6 +163,8 @@ export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
     );
   }
 
+  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
+
   return (
     <div className="space-y-0.5">
       {changes.map((change: GerritChange) => (
@@ -175,6 +178,7 @@ export function GerritRecentChanges({ widget }: GerritRecentChangesProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-[#e6edf3] truncate group-hover:text-cyan-400 transition-colors">
+                {new Date(change.created) >= newItemsCutoff && <NewItemDot />}
                 {change.subject}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">

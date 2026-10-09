@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useZuulBuilds } from '../../hooks/useZuulBuilds';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
 import type { Widget, ZuulBuild } from '@dashboard/shared';
 
 interface ZuulPeriodicJobsProps {
@@ -123,6 +124,8 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
     );
   }
 
+  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
+
   return (
     <div className="space-y-0.5">
       {builds.map((build: ZuulBuild) => {
@@ -138,6 +141,7 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-xs text-[#e6edf3] truncate group-hover:text-amber-400 transition-colors font-mono">
+                {new Date(build.end_time) >= newItemsCutoff && <NewItemDot />}
                 {build.job_name}
               </p>
               <div className="flex items-center gap-1.5 mt-0.5">
