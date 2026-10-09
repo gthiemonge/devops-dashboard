@@ -64,9 +64,11 @@ function getLabelBadges(change: GerritChange, labelName: string): JSX.Element[] 
       <span
         key={`${labelName}-${idx}`}
         className={`px-1 py-0.5 text-[10px] font-mono font-bold rounded border ${
-          isPositive
-            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-            : 'bg-red-500/20 text-red-400 border-red-500/30'
+          !isPositive
+            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+            : labelName === 'Workflow'
+              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+              : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
         }`}
       >
         {shortName}{valueStr}
