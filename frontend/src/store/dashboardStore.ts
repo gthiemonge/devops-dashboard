@@ -78,6 +78,26 @@ interface DashboardState {
   closeWidgetEditor: () => void;
 }
 
+// Remember the selected dashboard tab so a page reload stays on it
+const CURRENT_DASHBOARD_KEY = 'currentDashboardId';
+
+function loadCurrentDashboardId(): number | null {
+  try {
+    const value = parseInt(localStorage.getItem(CURRENT_DASHBOARD_KEY) ?? '', 10);
+    return Number.isNaN(value) ? null : value;
+  } catch {
+    return null;
+  }
+}
+
+function saveCurrentDashboardId(id: number): void {
+  try {
+    localStorage.setItem(CURRENT_DASHBOARD_KEY, id.toString());
+  } catch {
+    // Storage unavailable (e.g. private mode), the tab is just not remembered
+  }
+}
+
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   dashboards: [],
   currentDashboardId: null,
@@ -102,7 +122,9 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     // Set current dashboard if not set or invalid
     if (!state.currentDashboardId || !dashboards.find(d => d.id === state.currentDashboardId)) {
       if (dashboards.length > 0) {
-        set({ currentDashboardId: dashboards[0].id, layout: dashboards[0].layout });
+        const savedId = loadCurrentDashboardId();
+        const initial = dashboards.find(d => d.id === savedId) ?? dashboards[0];
+        set({ currentDashboardId: initial.id, layout: initial.layout });
       }
     } else {
       // Update layout from current dashboard
@@ -115,6 +137,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   setCurrentDashboard: (id) => {
     const dashboard = get().dashboards.find(d => d.id === id);
+    saveCurrentDashboardId(id);
     set({
       currentDashboardId: id,
       layout: dashboard?.layout || [],
@@ -136,6 +159,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const newDashboards = state.dashboards.filter((d) => d.id !== id);
       // If deleting current dashboard, switch to first available
       if (state.currentDashboardId === id && newDashboards.length > 0) {
+        saveCurrentDashboardId(newDashboards[0].id);
         return {
           dashboards: newDashboards,
           currentDashboardId: newDashboards[0].id,
