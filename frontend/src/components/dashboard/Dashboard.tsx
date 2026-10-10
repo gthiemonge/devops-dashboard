@@ -6,6 +6,7 @@ import { DashboardGrid } from './DashboardGrid';
 import { SettingsModal } from '../settings/SettingsModal';
 import { WidgetPicker } from '../settings/WidgetPicker';
 import { WidgetConfigModal } from '../settings/WidgetConfigModal';
+import { WidgetLoading } from '../ui';
 
 export function Dashboard() {
   const { isLoading: dashboardsLoading } = useDashboards();
@@ -24,8 +25,8 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500">Loading dashboard...</div>
+      <div className="h-64">
+        <WidgetLoading label="Loading dashboard…" />
       </div>
     );
   }

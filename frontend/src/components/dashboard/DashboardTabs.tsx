@@ -1,283 +1,205 @@
-import { useState, useRef, useEffect } from 'react';
-import { useDashboardStore } from '../../store/dashboardStore';
+import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import type { Dashboard } from '@dashboard/shared';
+import { useDashboardStore, useDashboardSignals } from '../../store/dashboardStore';
 import { useCreateDashboard, useUpdateDashboard, useDeleteDashboard } from '../../hooks/useDashboards';
-import { dashboardsApi } from '../../services/api';
-import { useQueryClient } from '@tanstack/react-query';
-import type { DashboardExport } from '@dashboard/shared';
+import { Button, Icon, useConfirm } from '../ui';
+import { cx } from '../../lib/cx';
 
-export function DashboardTabs() {
-  const {
-    dashboards,
-    currentDashboardId,
-    setCurrentDashboard,
-    renamingDashboardId,
-    startRenamingDashboard,
-    stopRenamingDashboard,
-    widgets,
-    widgetIssueCounts,
-    widgetNewItemCounts,
-    dashboardIssueCounts,
-    dashboardNewItemCounts,
-    toggleDashboardLock,
-    isDashboardLocked,
-  } = useDashboardStore();
+interface TabProps {
+  dashboard: Dashboard;
+  isActive: boolean;
+  canClose: boolean;
+}
 
-  const createDashboard = useCreateDashboard();
+function DashboardTab({ dashboard, isActive, canClose }: TabProps) {
+  const setCurrentDashboard = useDashboardStore((s) => s.setCurrentDashboard);
+  const renamingDashboardId = useDashboardStore((s) => s.renamingDashboardId);
+  const startRenamingDashboard = useDashboardStore((s) => s.startRenamingDashboard);
+  const stopRenamingDashboard = useDashboardStore((s) => s.stopRenamingDashboard);
+  const unlocked = useDashboardStore((s) => !!s.unlockedDashboardIds[dashboard.id]);
+  const { action, newCount } = useDashboardSignals(dashboard.id);
+
   const updateDashboard = useUpdateDashboard();
   const deleteDashboard = useDeleteDashboard();
+  const { armed, trigger, disarm } = useConfirm(() => deleteDashboard.mutate(dashboard.id));
 
+  const isRenaming = dashboard.id === renamingDashboardId;
   const [renameValue, setRenameValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (renamingDashboardId && inputRef.current) {
-      const dashboard = dashboards.find(d => d.id === renamingDashboardId);
-      if (dashboard) {
-        setRenameValue(dashboard.name);
-        inputRef.current.focus();
-        inputRef.current.select();
-      }
+    if (isRenaming && inputRef.current) {
+      setRenameValue(dashboard.name);
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  }, [renamingDashboardId, dashboards]);
+    // Only when entering rename mode
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRenaming]);
 
-  const handleRename = (id: number) => {
-    if (renameValue.trim()) {
-      updateDashboard.mutate({ id, dto: { name: renameValue.trim() } });
+  const commitRename = () => {
+    const name = renameValue.trim();
+    if (name && name !== dashboard.name) {
+      updateDashboard.mutate({ id: dashboard.id, dto: { name } });
     }
     stopRenamingDashboard();
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, id: number) => {
-    if (e.key === 'Enter') {
-      handleRename(id);
-    } else if (e.key === 'Escape') {
-      stopRenamingDashboard();
-    }
+  const onRenameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') commitRename();
+    else if (e.key === 'Escape') stopRenamingDashboard();
   };
+
+  const counts = (action > 0 || newCount > 0) && (
+    <span className="flex items-center gap-1.5">
+      {action > 0 && (
+        <span
+          className="inline-flex h-4 min-w-4 items-center justify-center rounded bg-danger/15 px-1 font-mono text-[10px] font-semibold tabular-nums text-danger"
+          title={`${action} need action`}
+        >
+          {action}
+        </span>
+      )}
+      {newCount > 0 && (
+        <span className="inline-flex items-center gap-1 font-mono text-[11px] tabular-nums text-fg-3" title={`${newCount} new`}>
+          <span aria-hidden className="size-1.5 rounded-full bg-new" />
+          {newCount}
+        </span>
+      )}
+    </span>
+  );
+
+  const label = [
+    dashboard.name,
+    action > 0 ? `${action} need action` : null,
+    newCount > 0 ? `${newCount} new` : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+
+  return (
+    <div
+      role="presentation"
+      className={cx(
+        'group/tab relative flex h-full shrink-0 items-center',
+        'after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:rounded-full',
+        isActive ? 'after:bg-accent' : 'after:bg-transparent hover:after:bg-line-strong',
+      )}
+    >
+      {isRenaming ? (
+        <input
+          ref={inputRef}
+          type="text"
+          aria-label="Dashboard name"
+          value={renameValue}
+          onChange={(e) => setRenameValue(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={onRenameKeyDown}
+          className="mx-1 h-7 w-44 rounded-md border border-accent bg-surface-2 px-2 text-[13px] text-fg outline-none"
+        />
+      ) : (
+        <button
+          type="button"
+          role="tab"
+          id={`dashboard-tab-${dashboard.id}`}
+          aria-selected={isActive}
+          aria-label={label}
+          tabIndex={isActive ? 0 : -1}
+          onClick={() => setCurrentDashboard(dashboard.id)}
+          onDoubleClick={() => unlocked && startRenamingDashboard(dashboard.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'F2' && unlocked) {
+              e.preventDefault();
+              startRenamingDashboard(dashboard.id);
+            }
+          }}
+          title={unlocked ? `${dashboard.name} (double-click to rename)` : dashboard.name}
+          className={cx(
+            'flex h-8 items-center gap-2 rounded-md px-2.5 text-[13px] font-medium transition-colors',
+            isActive ? 'text-fg' : 'text-fg-3 hover:bg-surface-2 hover:text-fg',
+          )}
+        >
+          <span className="max-w-[200px] truncate">{dashboard.name}</span>
+          {counts}
+        </button>
+      )}
+
+      {!isRenaming && unlocked && canClose && (
+        <button
+          type="button"
+          onClick={trigger}
+          onBlur={disarm}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') disarm();
+          }}
+          aria-label={armed ? `Confirm delete dashboard ${dashboard.name}` : `Delete dashboard ${dashboard.name}`}
+          title={armed ? 'Click again to delete this dashboard and its widgets' : 'Delete dashboard'}
+          className={cx(
+            'mr-1 inline-flex h-5 items-center justify-center rounded text-[11px] font-semibold transition-colors',
+            armed
+              ? 'bg-danger px-1.5 text-canvas'
+              : 'w-5 text-fg-3 hover:bg-danger/15 hover:text-danger',
+          )}
+        >
+          {armed ? 'Delete?' : <Icon name="close" size={12} strokeWidth={2} />}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function DashboardTabs() {
+  const dashboards = useDashboardStore((s) => s.dashboards);
+  const currentDashboardId = useDashboardStore((s) => s.currentDashboardId);
+  const setCurrentDashboard = useDashboardStore((s) => s.setCurrentDashboard);
+  const createDashboard = useCreateDashboard();
 
   const handleAddDashboard = () => {
     createDashboard.mutate({ name: `Dashboard ${dashboards.length + 1}` });
   };
 
-  const handleDelete = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (dashboards.length <= 1) {
-      alert('Cannot delete the last dashboard');
-      return;
-    }
-    if (confirm('Delete this dashboard and all its widgets?')) {
-      deleteDashboard.mutate(id);
-    }
-  };
-
-  const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleExport = async () => {
-    if (!currentDashboardId) return;
-    try {
-      const data = await dashboardsApi.export(currentDashboardId);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `dashboard-${data.dashboard.name.toLowerCase().replace(/\s+/g, '-')}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert(`Export failed: ${(err as Error).message}`);
-    }
-  };
-
-  const handleImport = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const data: DashboardExport = JSON.parse(text);
-      const newDashboard = await dashboardsApi.import(data);
-      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
-      queryClient.invalidateQueries({ queryKey: ['widgets'] });
-      setCurrentDashboard(newDashboard.id);
-    } catch (err) {
-      alert(`Import failed: ${(err as Error).message}`);
-    }
-
-    // Reset input
-    e.target.value = '';
+  // Arrow-key navigation between tabs (roving tabindex)
+  const onTablistKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
+    if ((e.target as HTMLElement).getAttribute('role') !== 'tab') return;
+    const idx = dashboards.findIndex((d) => d.id === currentDashboardId);
+    if (idx < 0 || dashboards.length === 0) return;
+    e.preventDefault();
+    let next = idx;
+    if (e.key === 'ArrowLeft') next = (idx - 1 + dashboards.length) % dashboards.length;
+    if (e.key === 'ArrowRight') next = (idx + 1) % dashboards.length;
+    if (e.key === 'Home') next = 0;
+    if (e.key === 'End') next = dashboards.length - 1;
+    const id = dashboards[next].id;
+    setCurrentDashboard(id);
+    requestAnimationFrame(() => document.getElementById(`dashboard-tab-${id}`)?.focus());
   };
 
   return (
-    <div className="flex items-center gap-0.5 py-1 overflow-x-auto">
-      {dashboards.map((dashboard) => {
-        const isActive = dashboard.id === currentDashboardId;
-        const isRenaming = dashboard.id === renamingDashboardId;
-
-        // Calculate issue count for this dashboard
-        // For current dashboard, use live widget issue counts
-        // For other dashboards, use stored dashboard-level counts
-        const issueCount = isActive
-          ? widgets
-              .filter((w) => w.dashboardId === dashboard.id)
-              .reduce((sum, w) => sum + (widgetIssueCounts[w.id] || 0), 0)
-          : dashboardIssueCounts[dashboard.id] ?? dashboard.attentionCount ?? 0;
-        const hasIssues = issueCount > 0;
-
-        // Calculate new items count for this dashboard
-        const newItemCount = isActive
-          ? widgets
-              .filter((w) => w.dashboardId === dashboard.id)
-              .reduce((sum, w) => sum + (widgetNewItemCounts[w.id] || 0), 0)
-          : dashboardNewItemCounts[dashboard.id] ?? 0;
-        const hasNewItems = newItemCount > 0;
-
-        return (
-          <div
+    <div className="flex h-full min-w-0 items-center gap-1">
+      <div
+        role="tablist"
+        aria-label="Dashboards"
+        onKeyDown={onTablistKeyDown}
+        className="flex h-full min-w-0 items-center gap-0.5 overflow-x-auto [scrollbar-width:none]"
+      >
+        {dashboards.map((dashboard) => (
+          <DashboardTab
             key={dashboard.id}
-            onClick={() => !isRenaming && setCurrentDashboard(dashboard.id)}
-            onDoubleClick={() => startRenamingDashboard(dashboard.id)}
-            className={`
-              group relative flex items-center gap-2 px-3 py-1.5 cursor-pointer
-              transition-all select-none text-xs font-medium
-              border-b-2 -mb-[1px]
-              ${isActive
-                ? 'text-cyan-400 border-cyan-400 bg-[#161b22]'
-                : 'text-[#7d8590] border-transparent hover:text-[#e6edf3] hover:bg-[#161b22]/50'
-              }
-            `}
-          >
-            {isRenaming ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => handleRename(dashboard.id)}
-                onKeyDown={(e) => handleKeyDown(e, dashboard.id)}
-                className="bg-[#0d1117] text-cyan-400 text-xs px-1.5 py-0.5 rounded w-24 outline-none border border-cyan-500 font-mono"
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <>
-                {/* Status dot for active dashboard */}
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                )}
-
-                <span className="truncate max-w-28 font-mono">{dashboard.name}</span>
-
-                {/* Badges - show issues and new items */}
-                {(hasIssues || hasNewItems) && (
-                  <div className="flex items-center gap-1">
-                    {hasIssues && (
-                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-red-500/20 text-red-400 font-mono font-bold">
-                        {issueCount}
-                      </span>
-                    )}
-                    {hasNewItems && (
-                      <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 font-mono font-bold">
-                        +{newItemCount}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Close button */}
-            {!isRenaming && dashboards.length > 1 && (
-              <button
-                onClick={(e) => handleDelete(dashboard.id, e)}
-                className={`
-                  p-0.5 rounded transition-all
-                  ${isActive ? 'opacity-40 hover:opacity-100' : 'opacity-0 group-hover:opacity-40 hover:!opacity-100'}
-                  hover:text-red-400 hover:bg-red-500/10
-                `}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            )}
-          </div>
-        );
-      })}
-
-      {/* Action buttons */}
-      <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-[#21262d]">
-        {/* Add dashboard */}
-        <button
-          onClick={handleAddDashboard}
-          disabled={createDashboard.isPending}
-          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
-          title="Add dashboard"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-        </button>
-
-        {/* Export dashboard */}
-        <button
-          onClick={handleExport}
-          disabled={!currentDashboardId}
-          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors disabled:opacity-50"
-          title="Export current dashboard"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
-
-        {/* Import dashboard */}
-        <button
-          onClick={handleImport}
-          className="p-1.5 rounded text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22] transition-colors"
-          title="Import dashboard"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
-        </button>
-
-        {/* Lock/Unlock dashboard */}
-        <button
-          onClick={() => currentDashboardId && toggleDashboardLock(currentDashboardId)}
-          disabled={!currentDashboardId}
-          className={`p-1.5 rounded transition-colors ${
-            isDashboardLocked()
-              ? 'text-[#484f58] hover:text-cyan-400 hover:bg-[#161b22]'
-              : 'text-cyan-400 hover:text-cyan-300 hover:bg-[#161b22]'
-          }`}
-          title={isDashboardLocked() ? 'Unlock dashboard (enable editing)' : 'Lock dashboard (prevent editing)'}
-        >
-          {isDashboardLocked() ? (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0zm-2 7a2 2 0 11-4 0 2 2 0 014 0z" clipRule="evenodd" />
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z" />
-            </svg>
-          )}
-        </button>
-
-        {/* Hidden file input for import */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileChange}
-          className="hidden"
-        />
+            dashboard={dashboard}
+            isActive={dashboard.id === currentDashboardId}
+            canClose={dashboards.length > 1}
+          />
+        ))}
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="plus"
+        aria-label="New dashboard"
+        onClick={handleAddDashboard}
+        disabled={createDashboard.isPending}
+      />
     </div>
   );
 }

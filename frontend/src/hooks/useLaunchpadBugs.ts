@@ -14,6 +14,7 @@ interface UseLaunchpadBugsOptions {
   enabled?: boolean;
 }
 
+/** Data: { bugs, totalSize } — totalSize is the number of matching bugs before the limit. */
 export function useLaunchpadBugs(options: UseLaunchpadBugsOptions) {
   return useQuery({
     queryKey: [

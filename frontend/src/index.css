@@ -1,34 +1,62 @@
 @import "tailwindcss";
 
-:root {
-  /* SecOps/DevOps dark theme */
-  --color-cyan: #06b6d4;
-  --color-cyan-dim: #0891b2;
-  --color-green: #10b981;
-  --color-green-dim: #059669;
-  --color-amber: #f59e0b;
-  --color-red: #ef4444;
-  --color-purple: #a855f7;
+/* Plain :hover (Tailwind v4 wraps hover in @media (hover: hover) by default, which
+   headless browsers used for screenshots report as false). */
+@custom-variant hover (&:hover);
 
-  /* Backgrounds - very dark */
-  --bg-base: #0a0e14;
-  --bg-surface: #0d1117;
-  --bg-elevated: #161b22;
-  --bg-hover: #1c2128;
+/*
+ * Design tokens — the ONLY palette of the app (see UI-SPEC "Visual language").
+ * Use them through Tailwind utilities: bg-canvas, bg-surface, text-fg-3,
+ * border-line, bg-danger/15, text-ok, ring-accent, font-mono, ...
+ * Colors are plain hex so opacity modifiers (bg-danger/15, border-danger/30) work.
+ * `static`: every token is always emitted as a CSS variable (var(--color-surface) is
+ * usable in inline styles / SVG even if no utility references it).
+ *
+ * Contrast (WCAG 2.x), text on surface / surface-2:
+ *   fg 14.65 / 13.24, fg-2 9.49 / 8.58, fg-3 5.77 / 5.22
+ *   ok 6.82 / 6.16, warn 7.44 / 6.72, danger 6.29 / 5.68, info 6.85 / 6.19,
+ *   accent/new 8.30 / 7.49.  Semantic text on its own /15 chip background over
+ *   surface ≥ 5.1 (≥ 4.57 over surface-2).
+ */
+@theme static {
+  --font-sans: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', ui-monospace, Consolas, monospace;
 
-  /* Text */
-  --text-primary: #e6edf3;
-  --text-secondary: #7d8590;
-  --text-muted: #484f58;
+  /* Surfaces */
+  --color-canvas: #0d1117;     /* page background */
+  --color-surface: #151b23;    /* widget / card */
+  --color-surface-2: #1d242d;  /* widget header, inputs, row hover */
+  --color-surface-3: #262e38;  /* pressed / selected */
 
   /* Borders */
-  --border-default: #21262d;
-  --border-muted: #30363d;
+  --color-line: #2d353f;
+  --color-line-strong: #414a56;
+
+  /* Text */
+  --color-fg: #e6edf3;    /* primary */
+  --color-fg-2: #b7c1cc;  /* secondary */
+  --color-fg-3: #8d96a0;  /* tertiary / meta — lowest allowed for readable text */
+
+  /* Interactive accent (active tab, primary button, focus ring, link hover) */
+  --color-accent: #39c5cf;
+
+  /* Semantics */
+  --color-ok: #3fb950;
+  --color-warn: #d9a033;
+  --color-danger: #ff6d66;
+  --color-info: #58a6ff;
+  --color-new: #39c5cf;
+
+  /* Source identity colors — ONLY for the small source icon in widget headers */
+  --color-gerrit: #6cb6ff;
+  --color-zuul: #bc8cff;
+  --color-irc: #e275ad;
+  --color-launchpad: #e3956b;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--border-muted) transparent;
+  scrollbar-color: var(--color-line-strong) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -41,7 +69,7 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--border-muted);
+  background: var(--color-line-strong);
   border-radius: 3px;
 }
 
@@ -49,53 +77,41 @@
    the page scrollbar appears or disappears */
 html {
   scrollbar-gutter: stable;
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-base);
-  color: var(--text-primary);
+  background-color: var(--color-canvas);
+  color: var(--color-fg);
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* Monospace for data */
-.font-mono {
-  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
-}
-
-/* Glow effects */
-.glow-cyan {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.15);
-}
-
-.glow-green {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
-}
-
-.glow-red {
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
-}
-
-/* Status pulse animation */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+/* Global keyboard focus ring. In the base layer so that utilities
+   (focus-visible:outline-offset-[-2px], outline-none + ring, ...) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 1px;
+  }
 }
 
 /* Grid layout styles */
 .react-grid-layout {
   margin: 0 !important;
+}
+
+/* Graph-paper background only while editing: add the `is-editing` class to the
+   grid (or to any ancestor of it) when the dashboard is unlocked. */
+.react-grid-layout.is-editing,
+.is-editing .react-grid-layout {
   background:
-    linear-gradient(90deg, var(--border-default) 1px, transparent 1px),
-    linear-gradient(var(--border-default) 1px, transparent 1px);
+    linear-gradient(90deg, var(--color-line) 1px, transparent 1px),
+    linear-gradient(var(--color-line) 1px, transparent 1px);
   background-size: 20px 20px;
   background-position: -1px -1px;
 }
@@ -105,16 +121,17 @@ body {
 }
 
 .react-grid-item.react-grid-placeholder {
-  background: var(--color-cyan);
-  opacity: 0.2;
-  border-radius: 0;
-  border: 1px dashed var(--color-cyan);
+  background: var(--color-accent);
+  opacity: 0.15;
+  border-radius: 8px;
+  border: 1px dashed var(--color-accent);
 }
 
 .react-grid-item > .react-resizable-handle {
   position: absolute;
   width: 20px;
   height: 20px;
+  background-image: none;
 }
 
 .react-grid-item > .react-resizable-handle::after {
@@ -124,23 +141,12 @@ body {
   bottom: 4px;
   width: 6px;
   height: 6px;
-  border-right: 2px solid var(--color-cyan);
-  border-bottom: 2px solid var(--color-cyan);
-  opacity: 0.5;
+  border-right: 2px solid var(--color-fg-3);
+  border-bottom: 2px solid var(--color-fg-3);
+  opacity: 0.6;
 }
 
 .react-grid-item:hover > .react-resizable-handle::after {
+  border-color: var(--color-accent);
   opacity: 1;
-}
-
-/* Widget transitions */
-.widget-enter {
-  opacity: 0;
-  transform: scale(0.95);
-}
-
-.widget-enter-active {
-  opacity: 1;
-  transform: scale(1);
-  transition: opacity 200ms, transform 200ms;
 }

@@ -1,6 +1,32 @@
 import { create } from 'zustand';
 import type { Widget, LayoutItem, DataSource, DashboardWithCounts } from '@dashboard/shared';
 
+/**
+ * Per-widget signals, reported by each widget with `reportWidgetSignals`.
+ * - total: number of items shown (after filtering noise)
+ * - truncated: more items exist than were fetched (header shows `total+`)
+ * - action: items needing the user's action (definition per widget type, see UI-SPEC)
+ * - newCount: items new within the `newItemsHours` window
+ * - available: optional number of matching items at the source when it is known
+ *   (header shows "20 of 120" instead of `20+`)
+ */
+export interface WidgetSignals {
+  total: number;
+  truncated: boolean;
+  action: number;
+  newCount: number;
+  available?: number;
+}
+
+/** Per-dashboard totals (sum of its widgets' signals). */
+export interface DashboardSignals {
+  action: number;
+  newCount: number;
+}
+
+const EMPTY_WIDGET_SIGNALS: WidgetSignals = Object.freeze({ total: 0, truncated: false, action: 0, newCount: 0 });
+const EMPTY_DASHBOARD_SIGNALS: DashboardSignals = Object.freeze({ action: 0, newCount: 0 });
+
 interface DashboardState {
   // Multi-dashboard support
   dashboards: DashboardWithCounts[];
@@ -11,16 +37,13 @@ interface DashboardState {
   layout: LayoutItem[];
   dataSources: DataSource[];
 
-  // Issue tracking per widget
-  widgetIssueCounts: Record<number, number>;
-
-  // New items tracking per widget
-  widgetNewItemCounts: Record<number, number>;
+  // Signals per widget (keyed by widget id). Entries for widgets of other dashboards
+  // are kept across tab switches; entries for deleted widgets are dropped.
+  widgetSignals: Record<number, WidgetSignals>;
+  // Signals per dashboard (keyed by dashboard id), recomputed from the widgets of each
+  // dashboard currently loaded in `widgets`; kept for other dashboards across tab switches.
+  dashboardSignals: Record<number, DashboardSignals>;
   newItemsHours: number;
-
-  // Dashboard-level counts (persist across tab switches)
-  dashboardIssueCounts: Record<number, number>;
-  dashboardNewItemCounts: Record<number, number>;
 
   // Lock state (per-dashboard, locked by default)
   unlockedDashboardIds: Record<number, boolean>;
@@ -53,17 +76,13 @@ interface DashboardState {
   // Data source actions
   setDataSources: (dataSources: DataSource[]) => void;
 
-  // Issue tracking actions
-  setWidgetIssueCount: (widgetId: number, count: number) => void;
-  getIssueCountForDashboard: (dashboardId: number) => number;
-
-  // New items tracking actions
-  setWidgetNewItemCount: (widgetId: number, count: number) => void;
-  getNewItemCountForDashboard: (dashboardId: number) => number;
+  // Signals actions
+  /**
+   * Report a widget's signals. Omitted fields keep their previous value (default 0/false).
+   * No-op when nothing changed, so it is safe to call from an effect on every render.
+   */
+  reportWidgetSignals: (widgetId: number, signals: Partial<WidgetSignals>) => void;
   setNewItemsHours: (hours: number) => void;
-
-  // Dashboard-level count actions
-  updateDashboardCounts: () => void;
 
   // Lock actions
   toggleDashboardLock: (id: number) => void;
@@ -98,17 +117,57 @@ function saveCurrentDashboardId(id: number): void {
   }
 }
 
+type SignalsSlice = Pick<DashboardState, 'widgetSignals' | 'dashboardSignals'>;
+
+/**
+ * Build the signals part of the state: recompute dashboardSignals for every dashboard
+ * that has widgets in `widgets` plus `extraDashboardIds` (e.g. a dashboard whose last
+ * widget was just removed), and keep the others.
+ */
+function buildSignals(
+  widgetSignals: Record<number, WidgetSignals>,
+  previous: Record<number, DashboardSignals>,
+  widgets: Widget[],
+  extraDashboardIds: number[] = [],
+): SignalsSlice {
+  const totals: Record<number, DashboardSignals> = {};
+  for (const id of extraDashboardIds) totals[id] = { action: 0, newCount: 0 };
+  for (const w of widgets) {
+    const t = (totals[w.dashboardId] ??= { action: 0, newCount: 0 });
+    const sig = widgetSignals[w.id];
+    if (sig) {
+      t.action += sig.action;
+      t.newCount += sig.newCount;
+    }
+  }
+
+  const dashboardSignals = { ...previous };
+  for (const [key, t] of Object.entries(totals)) {
+    const id = Number(key);
+    const prev = previous[id];
+    // Keep the previous object when unchanged so selectors stay referentially stable
+    dashboardSignals[id] = prev && prev.action === t.action && prev.newCount === t.newCount ? prev : t;
+  }
+
+  return { widgetSignals, dashboardSignals };
+}
+
+function omitKeys<T>(record: Record<number, T>, ids: number[]): Record<number, T> {
+  if (!ids.some((id) => id in record)) return record;
+  const copy = { ...record };
+  for (const id of ids) delete copy[id];
+  return copy;
+}
+
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   dashboards: [],
   currentDashboardId: null,
   widgets: [],
   layout: [],
   dataSources: [],
-  widgetIssueCounts: {},
-  widgetNewItemCounts: {},
+  widgetSignals: {},
+  dashboardSignals: {},
   newItemsHours: 4,
-  dashboardIssueCounts: {},
-  dashboardNewItemCounts: {},
   unlockedDashboardIds: {},
   isSettingsOpen: false,
   isWidgetPickerOpen: false,
@@ -157,26 +216,56 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   removeDashboard: (id) =>
     set((state) => {
       const newDashboards = state.dashboards.filter((d) => d.id !== id);
+      // Drop the signals of the deleted dashboard and of its loaded widgets
+      const removedWidgetIds = state.widgets.filter((w) => w.dashboardId === id).map((w) => w.id);
+      const signals = buildSignals(
+        omitKeys(state.widgetSignals, removedWidgetIds),
+        omitKeys(state.dashboardSignals, [id]),
+        state.widgets.filter((w) => w.dashboardId !== id),
+      );
       // If deleting current dashboard, switch to first available
       if (state.currentDashboardId === id && newDashboards.length > 0) {
         saveCurrentDashboardId(newDashboards[0].id);
         return {
+          ...signals,
           dashboards: newDashboards,
           currentDashboardId: newDashboards[0].id,
           layout: newDashboards[0].layout,
         };
       }
-      return { dashboards: newDashboards };
+      return { ...signals, dashboards: newDashboards };
     }),
 
   startRenamingDashboard: (id) => set({ renamingDashboardId: id }),
   stopRenamingDashboard: () => set({ renamingDashboardId: null }),
 
   // Widget actions
-  setWidgets: (widgets) => set({ widgets }),
+  setWidgets: (widgets) =>
+    set((state) => {
+      // Widgets that disappeared from a dashboard covered by the new list (or from the
+      // current dashboard, which may now be empty) were deleted: drop their signals.
+      const covered = new Set(widgets.map((w) => w.dashboardId));
+      if (state.currentDashboardId != null) covered.add(state.currentDashboardId);
+      const kept = new Set(widgets.map((w) => w.id));
+      const removed = state.widgets
+        .filter((w) => covered.has(w.dashboardId) && !kept.has(w.id))
+        .map((w) => w.id);
+      return {
+        widgets,
+        ...buildSignals(
+          omitKeys(state.widgetSignals, removed),
+          state.dashboardSignals,
+          widgets,
+          [...covered],
+        ),
+      };
+    }),
 
   addWidget: (widget) =>
-    set((state) => ({ widgets: [...state.widgets, widget] })),
+    set((state) => {
+      const widgets = [...state.widgets, widget];
+      return { widgets, ...buildSignals(state.widgetSignals, state.dashboardSignals, widgets) };
+    }),
 
   updateWidget: (id, updates) =>
     set((state) => ({
@@ -186,10 +275,20 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     })),
 
   removeWidget: (id) =>
-    set((state) => ({
-      widgets: state.widgets.filter((w) => w.id !== id),
-      layout: state.layout.filter((l) => l.i !== id.toString()),
-    })),
+    set((state) => {
+      const removed = state.widgets.find((w) => w.id === id);
+      const widgets = state.widgets.filter((w) => w.id !== id);
+      return {
+        widgets,
+        layout: state.layout.filter((l) => l.i !== id.toString()),
+        ...buildSignals(
+          omitKeys(state.widgetSignals, [id]),
+          state.dashboardSignals,
+          widgets,
+          removed ? [removed.dashboardId] : [],
+        ),
+      };
+    }),
 
   // Layout actions
   setLayout: (layout) => set({ layout }),
@@ -204,68 +303,31 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   // Data source actions
   setDataSources: (dataSources) => set({ dataSources }),
 
-  // Issue tracking actions
-  setWidgetIssueCount: (widgetId, count) => {
-    set((state) => ({
-      widgetIssueCounts: { ...state.widgetIssueCounts, [widgetId]: count },
-    }));
-    // Update dashboard-level counts
-    get().updateDashboardCounts();
-  },
-
-  getIssueCountForDashboard: (dashboardId) => {
+  // Signals actions
+  reportWidgetSignals: (widgetId, signals) => {
     const state = get();
-    // Get all widgets for this dashboard and sum their issue counts
-    // Note: widgets in state are only for current dashboard, so we need to check dashboardId
-    const widgetIds = state.widgets
-      .filter((w) => w.dashboardId === dashboardId)
-      .map((w) => w.id);
-    return widgetIds.reduce((sum, id) => sum + (state.widgetIssueCounts[id] || 0), 0);
-  },
-
-  // New items tracking actions
-  setWidgetNewItemCount: (widgetId, count) => {
-    set((state) => ({
-      widgetNewItemCounts: { ...state.widgetNewItemCounts, [widgetId]: count },
-    }));
-    // Update dashboard-level counts
-    get().updateDashboardCounts();
-  },
-
-  getNewItemCountForDashboard: (dashboardId) => {
-    const state = get();
-    const widgetIds = state.widgets
-      .filter((w) => w.dashboardId === dashboardId)
-      .map((w) => w.id);
-    return widgetIds.reduce((sum, id) => sum + (state.widgetNewItemCounts[id] || 0), 0);
+    const prev = state.widgetSignals[widgetId] ?? EMPTY_WIDGET_SIGNALS;
+    const next: WidgetSignals = {
+      total: signals.total ?? prev.total,
+      truncated: signals.truncated ?? prev.truncated,
+      action: signals.action ?? prev.action,
+      newCount: signals.newCount ?? prev.newCount,
+      available: 'available' in signals ? signals.available : prev.available,
+    };
+    if (
+      state.widgetSignals[widgetId] &&
+      prev.total === next.total &&
+      prev.truncated === next.truncated &&
+      prev.action === next.action &&
+      prev.newCount === next.newCount &&
+      prev.available === next.available
+    ) {
+      return; // unchanged: no state update, no re-render
+    }
+    set(buildSignals({ ...state.widgetSignals, [widgetId]: next }, state.dashboardSignals, state.widgets));
   },
 
   setNewItemsHours: (hours) => set({ newItemsHours: hours }),
-
-  // Dashboard-level count actions
-  updateDashboardCounts: () => {
-    const state = get();
-    if (!state.currentDashboardId) return;
-
-    const dashboardId = state.currentDashboardId;
-    const widgetIds = state.widgets
-      .filter((w) => w.dashboardId === dashboardId)
-      .map((w) => w.id);
-
-    const issueTotal = widgetIds.reduce(
-      (sum, id) => sum + (state.widgetIssueCounts[id] || 0),
-      0
-    );
-    const newItemTotal = widgetIds.reduce(
-      (sum, id) => sum + (state.widgetNewItemCounts[id] || 0),
-      0
-    );
-
-    set({
-      dashboardIssueCounts: { ...state.dashboardIssueCounts, [dashboardId]: issueTotal },
-      dashboardNewItemCounts: { ...state.dashboardNewItemCounts, [dashboardId]: newItemTotal },
-    });
-  },
 
   // Lock actions
   toggleDashboardLock: (id) =>
@@ -290,3 +352,39 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   editWidget: (id) => set({ editingWidgetId: id }),
   closeWidgetEditor: () => set({ editingWidgetId: null }),
 }));
+
+// ---------------------------------------------------------------------------
+// Signals selectors / hooks (referentially stable: safe with zustand v5)
+// ---------------------------------------------------------------------------
+
+/** Selector: signals of one widget (zeros if it has not reported yet). */
+export const selectWidgetSignals =
+  (widgetId: number) =>
+  (state: DashboardState): WidgetSignals =>
+    state.widgetSignals[widgetId] ?? EMPTY_WIDGET_SIGNALS;
+
+/** Selector: totals of one dashboard (zeros if unknown). */
+export const selectDashboardSignals =
+  (dashboardId: number | null | undefined) =>
+  (state: DashboardState): DashboardSignals =>
+    (dashboardId != null && state.dashboardSignals[dashboardId]) || EMPTY_DASHBOARD_SIGNALS;
+
+/** Selector: totals of the current dashboard. */
+export const selectCurrentDashboardSignals = (state: DashboardState): DashboardSignals =>
+  (state.currentDashboardId != null && state.dashboardSignals[state.currentDashboardId]) ||
+  EMPTY_DASHBOARD_SIGNALS;
+
+/** const { total, truncated, action, newCount } = useWidgetSignals(widget.id); */
+export function useWidgetSignals(widgetId: number): WidgetSignals {
+  return useDashboardStore(selectWidgetSignals(widgetId));
+}
+
+/** const { action, newCount } = useDashboardSignals(dashboard.id); */
+export function useDashboardSignals(dashboardId: number | null | undefined): DashboardSignals {
+  return useDashboardStore(selectDashboardSignals(dashboardId));
+}
+
+/** const { action, newCount } = useCurrentDashboardSignals(); */
+export function useCurrentDashboardSignals(): DashboardSignals {
+  return useDashboardStore(selectCurrentDashboardSignals);
+}

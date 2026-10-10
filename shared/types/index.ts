@@ -118,25 +118,52 @@ export interface GerritChange {
   labels?: Record<string, GerritLabel>;
   reviewers?: Record<string, GerritAccount[]>;
   current_revision?: string;
+  /** Patch set number of the current revision. */
+  current_revision_number?: number;
   mergeable?: boolean;
+  topic?: string;
+  hashtags?: string[];
+  /** Only present (true) when the change is marked Work In Progress. */
+  work_in_progress?: boolean;
+  /** Keyed by account id. */
+  attention_set?: Record<string, GerritAttentionSetInfo>;
+  unresolved_comment_count?: number;
+  total_comment_count?: number;
+  /** Set on the last change of a result page when more results exist. */
+  _more_changes?: boolean;
 }
 
 export interface GerritAccount {
   _account_id: number;
   name?: string;
+  display_name?: string;
   email?: string;
   username?: string;
+  /** e.g. ["SERVICE_USER"] for bots (proposal-bot, zuul). */
+  tags?: string[];
+}
+
+export interface GerritAttentionSetInfo {
+  account: GerritAccount;
+  last_update?: string;
+  reason?: string;
+  reason_account?: GerritAccount;
+}
+
+export interface GerritApprovalInfo extends GerritAccount {
+  /** Omitted when the vote is 0 (reviewer without a vote). */
+  value?: number;
+  date?: string;
+  tag?: string;
 }
 
 export interface GerritLabel {
   approved?: GerritAccount;
   rejected?: GerritAccount;
+  recommended?: GerritAccount;
+  disliked?: GerritAccount;
   value?: number;
-  all?: Array<{
-    value: number;
-    _account_id: number;
-    name?: string;
-  }>;
+  all?: GerritApprovalInfo[];
 }
 
 // Zuul Types
@@ -160,6 +187,12 @@ export interface ZuulBuild {
   log_url: string;
   event_id: string;
   ref: ZuulBuildRef;
+  /** false for builds Zuul will retry automatically (result RETRY); ignore those. */
+  final?: boolean;
+  /** false for non-voting jobs. */
+  voting?: boolean;
+  error_detail?: string | null;
+  event_timestamp?: string;
 }
 
 // IRC Types

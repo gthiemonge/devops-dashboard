@@ -1,58 +1,183 @@
-import { ReactNode, useEffect, useCallback } from 'react';
+/**
+ * Accessible modal dialog used by every settings / widget dialog.
+ *
+ *   <Modal title="Configure widget" onClose={close} footer={<><Button>Cancel</Button><Button variant="primary">Save</Button></>}>
+ *     ...fields
+ *   </Modal>
+ *
+ * - role="dialog", aria-modal, labelled by the title (and described by `description` when given)
+ * - Escape and a click on the backdrop close it
+ * - initial focus goes to the first element marked `data-autofocus`, else the first focusable
+ *   element of the body, else the dialog itself; Tab / Shift+Tab cycle inside the dialog
+ * - focus returns to the previously focused element on close
+ * - header and footer stay in place; only the body scrolls
+ */
+import { useEffect, useId, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { Button } from '../ui';
+import { cx } from '../../lib/cx';
+
+export type ModalSize = 'md' | 'lg';
 
 interface ModalProps {
-  title: string;
+  title: ReactNode;
+  /** Optional one-line description under the title. */
+  description?: ReactNode;
   children: ReactNode;
   onClose: () => void;
-  width?: 'sm' | 'md' | 'lg';
+  size?: ModalSize;
+  /** Rendered below the header, outside the scrolling body (e.g. a tablist). */
+  toolbar?: ReactNode;
+  /** Action bar pinned to the bottom of the dialog. */
+  footer?: ReactNode;
+  /** Content rendered at the start of the footer, left of the actions (e.g. a hint). */
+  footerStart?: ReactNode;
 }
 
-export function Modal({ title, children, onClose, width = 'md' }: ModalProps) {
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+const SIZE: Record<ModalSize, string> = {
+  md: 'max-w-lg',
+  lg: 'max-w-2xl',
+};
 
+const FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function focusableIn(root: HTMLElement): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+    (el) => !el.closest('[inert]') && el.getClientRects().length > 0,
+  );
+}
+
+export function Modal({ title, description, children, onClose, size = 'md', toolbar, footer, footerStart }: ModalProps) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const mouseDownOnBackdrop = useRef(false);
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    onCloseRef.current = onClose;
+  });
 
-  const widthClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
+  // Initial focus, focus restore, scroll lock.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const body = bodyRef.current;
+    if (panel) {
+      const target =
+        panel.querySelector<HTMLElement>('[data-autofocus]') ??
+        (body && focusableIn(body)[0]) ??
+        panel;
+      target.focus({ preventScroll: true });
+    }
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = overflow;
+      if (previouslyFocused && previouslyFocused.isConnected && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus({ preventScroll: true });
+      }
+    };
+  }, []);
+
+  // Escape closes. Listening on document so it works wherever focus is; components that
+  // consume Escape themselves (e.g. an armed ConfirmButton) stop its propagation first.
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        e.preventDefault();
+        onCloseRef.current();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Focus trap.
+  const handlePanelKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab' || !panelRef.current) return;
+    const items = focusableIn(panelRef.current);
+    if (items.length === 0) {
+      e.preventDefault();
+      return;
+    }
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey && (active === first || active === panelRef.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-[#0a0e14]/90 backdrop-blur-sm"
-        onClick={onClose}
-      />
+  const handleBackdropMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    mouseDownOnBackdrop.current = e.target === e.currentTarget;
+  };
+  const handleBackdropClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Only close when the whole click happened on the backdrop (not a text selection
+    // drag that started inside the dialog).
+    if (e.target === e.currentTarget && mouseDownOnBackdrop.current) onClose();
+    mouseDownOnBackdrop.current = false;
+  };
 
-      {/* Modal */}
-      <div className={`relative bg-[#0d1117] border border-[#30363d] rounded-lg shadow-2xl ${widthClasses[width]} w-full`}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#21262d]">
-          <h2 className="text-sm font-semibold text-[#e6edf3] font-mono uppercase tracking-wider">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-[#484f58] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-canvas/75 px-4 py-[8vh] backdrop-blur-[2px]"
+      onMouseDown={handleBackdropMouseDown}
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
+        onKeyDown={handlePanelKeyDown}
+        className={cx(
+          'flex max-h-[84vh] w-full flex-col overflow-hidden rounded-xl border border-line bg-surface font-sans',
+          'shadow-[0_16px_48px_-12px_rgb(0_0_0/0.6)] outline-none',
+          SIZE[size],
+        )}
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line py-3 pl-5 pr-3">
+          <div className="min-w-0 pt-0.5">
+            <h2 id={titleId} className="truncate text-[15px] font-semibold leading-6 text-fg">
+              {title}
+            </h2>
+            {description && (
+              <p id={descriptionId} className="mt-0.5 text-xs text-fg-3">
+                {description}
+              </p>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" icon="close" aria-label="Close dialog" onClick={onClose} />
         </div>
 
-        {/* Content */}
-        <div className="p-4">
+        {toolbar && <div className="shrink-0 border-b border-line px-5">{toolbar}</div>}
+
+        <div ref={bodyRef} className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {children}
         </div>
+
+        {(footer || footerStart) && (
+          <div className="flex shrink-0 items-center gap-2 border-t border-line bg-surface px-5 py-3">
+            <div className="min-w-0 flex-1 text-xs text-fg-3">{footerStart}</div>
+            {footer}
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

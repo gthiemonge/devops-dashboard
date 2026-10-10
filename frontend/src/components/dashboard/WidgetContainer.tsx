@@ -1,5 +1,5 @@
-import type { JSX } from 'react';
-import { useDashboardStore } from '../../store/dashboardStore';
+import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { useDashboardStore, useWidgetSignals } from '../../store/dashboardStore';
 import { useDeleteWidget } from '../../hooks/useWidgets';
 import { GerritRecentChanges } from '../widgets/GerritRecentChanges';
 import { GerritMyChanges } from '../widgets/GerritMyChanges';
@@ -9,6 +9,8 @@ import { ZuulPeriodicJobs } from '../widgets/ZuulPeriodicJobs';
 import { IrcRecentMessages } from '../widgets/IrcRecentMessages';
 import { LaunchpadBugs } from '../widgets/LaunchpadBugs';
 import type { Widget, WidgetConfig, WidgetType } from '@dashboard/shared';
+import { Button, Chip, ConfirmButton, Icon, WidgetError } from '../ui';
+import { cx } from '../../lib/cx';
 
 function formatProjects(projectInput: string | undefined): string {
   if (!projectInput) return '';
@@ -29,8 +31,10 @@ function toGerritProject(project: string): string {
   return project;
 }
 
-function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig): string | null {
-  const baseUrl = 'https://review.opendev.org/q/';
+const DEFAULT_GERRIT_URL = 'https://review.opendev.org';
+
+function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig, gerritUrl?: string): string | null {
+  const baseUrl = `${(gerritUrl || DEFAULT_GERRIT_URL).replace(/\/+$/, '')}/q/`;
 
   if (type === 'gerrit_recent_changes') {
     const projectInput = (config.project as string) || '';
@@ -80,61 +84,17 @@ function generateLaunchpadSearchUrl(config: WidgetConfig): string | null {
   return `https://bugs.launchpad.net/${project}/+bugs`;
 }
 
-function getWidgetIcon(type: WidgetType): JSX.Element {
-  switch (type) {
-    case 'gerrit_recent_changes':
-    case 'gerrit_my_changes':
-    case 'gerrit_user_changes':
-    case 'gerrit_custom_query':
-      return (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-      );
-    case 'zuul_periodic_jobs':
-      return (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-        </svg>
-      );
-    case 'irc_recent_messages':
-      return (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
-        </svg>
-      );
-    case 'launchpad_bugs':
-      return (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 8h-1.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5s-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H5v2h1.09c-.05.33-.09.66-.09 1v1H5v2h1v1c0 .34.04.67.09 1H5v2h1.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H19v-2h-1.09c.05-.33.09-.66.09-1v-1h1v-2h-1v-1c0-.34-.04-.67-.09-1H19V8zm-6 8h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-        </svg>
-      );
-    default:
-      return (
-        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/>
-        </svg>
-      );
-  }
-}
+type SourceKind = 'gerrit' | 'zuul' | 'irc' | 'launchpad';
 
-function getWidgetColor(type: WidgetType): string {
-  switch (type) {
-    case 'gerrit_recent_changes':
-    case 'gerrit_my_changes':
-    case 'gerrit_user_changes':
-    case 'gerrit_custom_query':
-      return 'text-emerald-400';
-    case 'zuul_periodic_jobs':
-      return 'text-amber-400';
-    case 'irc_recent_messages':
-      return 'text-purple-400';
-    case 'launchpad_bugs':
-      return 'text-orange-400';
-    default:
-      return 'text-cyan-400';
-  }
-}
+const SOURCE: Record<WidgetType, { kind: SourceKind; color: string; label: string }> = {
+  gerrit_recent_changes: { kind: 'gerrit', color: 'text-gerrit', label: 'Gerrit' },
+  gerrit_my_changes: { kind: 'gerrit', color: 'text-gerrit', label: 'Gerrit' },
+  gerrit_user_changes: { kind: 'gerrit', color: 'text-gerrit', label: 'Gerrit' },
+  gerrit_custom_query: { kind: 'gerrit', color: 'text-gerrit', label: 'Gerrit' },
+  zuul_periodic_jobs: { kind: 'zuul', color: 'text-zuul', label: 'Zuul' },
+  irc_recent_messages: { kind: 'irc', color: 'text-irc', label: 'IRC' },
+  launchpad_bugs: { kind: 'launchpad', color: 'text-launchpad', label: 'Launchpad' },
+};
 
 function generateTitle(type: WidgetType, config: WidgetConfig): string {
   const project = config.project as string;
@@ -149,12 +109,12 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
       const isBackports = branch && (branch.includes('stable') || branch.startsWith('stable'));
       const prefix = isBackports ? 'Backports' : 'Changes';
       const branchSuffix = branch && !isBackports ? ` (${branch})` : '';
-      return shortProject ? `${prefix}: ${shortProject}${branchSuffix}` : 'Recent Changes';
+      return shortProject ? `${prefix}: ${shortProject}${branchSuffix}` : 'Recent changes';
     }
     case 'gerrit_my_changes':
-      return 'My Changes';
+      return 'My changes';
     case 'gerrit_user_changes':
-      return owner ? `Changes: ${owner}` : "User's Changes";
+      return owner ? `Changes: ${owner}` : "User's changes";
     case 'zuul_periodic_jobs': {
       const parts = [pipeline || 'periodic', shortProject].filter(Boolean);
       return `Zuul: ${parts.join(' / ')}`;
@@ -162,9 +122,35 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
     case 'irc_recent_messages':
       return channel ? `#${channel}` : 'IRC';
     case 'launchpad_bugs':
-      return shortProject ? `Bugs: ${shortProject}` : 'Launchpad Bugs';
+      return shortProject ? `Bugs: ${shortProject}` : 'Launchpad bugs';
     default:
       return 'Widget';
+  }
+}
+
+/** Keeps one crashing widget from taking down the whole dashboard. */
+class WidgetErrorBoundary extends Component<{ children: ReactNode }, { error: unknown }> {
+  state = { error: null as unknown };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    console.error('Widget crashed:', error, info.componentStack);
+  }
+
+  render() {
+    if (this.state.error != null) {
+      return (
+        <WidgetError
+          message="This widget failed to render"
+          error={this.state.error}
+          onRetry={() => this.setState({ error: null })}
+        />
+      );
+    }
+    return this.props.children;
   }
 }
 
@@ -176,19 +162,24 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
   const title = widget.type === 'gerrit_custom_query'
     ? widget.title
     : generateTitle(widget.type, widget.config);
+  // Link Gerrit searches to the widget's own Gerrit instance (falls back to opendev)
+  const gerritUrl = useDashboardStore((s) => {
+    const ds = s.dataSources.find((d) => d.id === widget.dataSourceId);
+    return ds?.type === 'gerrit' ? ds.baseUrl : undefined;
+  });
   const searchUrl = widget.type === 'launchpad_bugs'
     ? generateLaunchpadSearchUrl(widget.config)
-    : generateGerritSearchUrl(widget.type, widget.config);
-  const { editWidget, isDashboardLocked } = useDashboardStore();
-  const locked = isDashboardLocked();
+    : generateGerritSearchUrl(widget.type, widget.config, gerritUrl);
+  const editWidget = useDashboardStore((s) => s.editWidget);
+  const locked = useDashboardStore((s) =>
+    s.currentDashboardId == null ? true : !s.unlockedDashboardIds[s.currentDashboardId],
+  );
+  const { total, truncated, action, available } = useWidgetSignals(widget.id);
+  const showAvailable = available != null && available > total;
   const deleteWidget = useDeleteWidget();
-  const widgetColor = getWidgetColor(widget.type);
+  const source = SOURCE[widget.type] as (typeof SOURCE)[WidgetType] | undefined;
 
-  const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this widget?')) {
-      deleteWidget.mutate(widget.id);
-    }
-  };
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   const renderWidget = () => {
     switch (widget.type) {
@@ -207,64 +198,97 @@ export function WidgetContainer({ widget }: WidgetContainerProps) {
       case 'launchpad_bugs':
         return <LaunchpadBugs widget={widget} />;
       default:
-        return <div className="text-[#7d8590] text-sm">Unknown widget type</div>;
+        return <WidgetError message="Unknown widget type" />;
     }
   };
 
   return (
-    <div className="bg-[#0d1117] border border-[#21262d] h-full flex flex-col overflow-hidden group">
-      {/* Widget header */}
-      <div className={`widget-drag-handle flex items-center justify-between px-3 py-2 bg-[#161b22] border-b border-[#21262d] ${locked ? 'cursor-default' : 'cursor-move'}`}>
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={widgetColor}>
-            {getWidgetIcon(widget.type)}
-          </span>
+    <section
+      aria-label={title}
+      className="group/card flex h-full flex-col overflow-hidden rounded-lg border border-line bg-surface"
+    >
+      {/* Widget header (drag handle when unlocked) */}
+      <div
+        className={cx(
+          'widget-drag-handle flex h-9 shrink-0 items-center gap-2 border-b border-line bg-surface-2 pl-3 pr-1.5',
+          locked ? 'cursor-default' : 'cursor-move',
+        )}
+      >
+        {source && (
+          <Icon name={source.kind} size={14} strokeWidth={2} className={source.color} title={source.label} />
+        )}
+        <h3 className="flex min-w-0 items-center text-[13px] font-semibold text-fg">
           {searchUrl ? (
             <a
               href={searchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onMouseDown={(e) => e.stopPropagation()}
-              className="font-mono text-xs text-[#e6edf3] truncate hover:text-cyan-400 transition-colors"
+              onMouseDown={stop}
+              title={`Open in ${source?.label ?? 'source'}`}
+              className="group/title flex min-w-0 items-center gap-1 rounded-sm hover:text-accent"
             >
-              {title}
+              <span className="truncate">{title}</span>
+              <Icon
+                name="external-link"
+                size={12}
+                className="text-fg-3 opacity-0 transition-opacity group-hover/card:opacity-100 group-focus-visible/title:opacity-100 group-hover/title:text-accent"
+              />
             </a>
           ) : (
-            <h3 className="font-mono text-xs text-[#e6edf3] truncate">{title}</h3>
+            <span className="truncate">{title}</span>
           )}
-        </div>
+        </h3>
 
-        {/* Actions (hidden when locked) */}
+        {total > 0 && (
+          <span
+            className="shrink-0 font-mono text-[11px] tabular-nums text-fg-3"
+            title={
+              showAvailable
+                ? `Showing ${total} of ${available} items`
+                : truncated
+                  ? `Showing the first ${total} items`
+                  : `${total} item${total === 1 ? '' : 's'}`
+            }
+          >
+            {showAvailable ? `${total} of ${available}` : `${total}${truncated ? '+' : ''}`}
+          </span>
+        )}
+        {action > 0 && (
+          <Chip variant="danger" size="sm" title={`${action} need action`}>
+            {action}
+          </Chip>
+        )}
+
+        <span className="flex-1" />
+
+        {/* Actions (only when unlocked; shown on hover or keyboard focus) */}
         {!locked && (
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
+          <div className="flex shrink-0 items-center opacity-0 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="edit"
+              aria-label="Configure widget"
               onClick={() => editWidget(widget.id)}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-1 text-[#484f58] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors cursor-pointer"
-              title="Configure"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <button
-              onClick={handleDelete}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-1 text-[#484f58] hover:text-red-400 hover:bg-red-500/10 rounded transition-colors cursor-pointer"
-              title="Delete"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+              onMouseDown={stop}
+            />
+            <ConfirmButton
+              variant="ghost"
+              size="sm"
+              icon="trash"
+              aria-label="Delete widget"
+              confirmLabel="Delete?"
+              onConfirm={() => deleteWidget.mutate(widget.id)}
+              onMouseDown={stop}
+            />
           </div>
         )}
       </div>
 
       {/* Widget content */}
-      <div className="flex-1 overflow-auto p-2">
-        {renderWidget()}
+      <div className="min-h-0 flex-1 overflow-auto py-1">
+        <WidgetErrorBoundary>{renderWidget()}</WidgetErrorBoundary>
       </div>
-    </div>
+    </section>
   );
 }

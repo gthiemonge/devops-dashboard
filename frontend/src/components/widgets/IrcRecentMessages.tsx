@@ -1,142 +1,148 @@
-import { useEffect, useRef, type JSX } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useIrcMessages } from '../../hooks/useIrcMessages';
 import { useDashboardStore } from '../../store/dashboardStore';
-import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
-import type { Widget, IrcMessage } from '@dashboard/shared';
+import { Icon, NewDot, WidgetEmpty, WidgetError, WidgetLoading } from '../ui';
+import { formatAbsolute } from '../../lib/format';
+import { getNewItemsCutoff } from '../../lib/newItems';
+import { cx } from '../../lib/cx';
+import { buildIrcItems, isBotNick, messageDate, splitUrls, summarizeBotMessage, type IrcEntry } from './irc/ircItems';
+import type { Widget } from '@dashboard/shared';
 
 interface IrcRecentMessagesProps {
   widget: Widget;
 }
 
-function formatTime(timestamp: string, time: string): string {
-  const date = new Date(timestamp.includes('T') ? timestamp : `${timestamp}`);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMins / 60);
+const LINK = 'text-fg-2 underline decoration-line-strong underline-offset-2 hover:text-accent hover:decoration-current';
+/** Right-hand timestamp column, shared by every row so times line up. */
+const TIME = 'w-10 shrink-0 text-right font-mono text-[11px] tabular-nums text-fg-3';
 
-  if (diffMins < 60) return time;
-  if (diffHours < 24) return time;
-
-  const dateStr = timestamp.split('T')[0];
-  return `${dateStr.slice(5)} ${time}`;
+function hhmm(d: Date): string {
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
-function getAvatarColor(nick: string): string {
-  let hash = 0;
-  for (let i = 0; i < nick.length; i++) {
-    hash = nick.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 50%, 50%)`;
+function Time({ at, className }: { at: Date; className?: string }) {
+  return (
+    <time dateTime={at.toISOString()} title={formatAbsolute(at)} className={cx(TIME, className)}>
+      {hhmm(at)}
+    </time>
+  );
 }
 
-function getInitials(nick: string): string {
-  return nick.slice(0, 2).toUpperCase();
-}
-
-function renderMessageContent(message: string): JSX.Element {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = message.split(urlRegex);
-
+function MessageText({ text }: { text: string }) {
   return (
     <>
-      {parts.map((part, i) => {
-        if (urlRegex.test(part)) {
-          urlRegex.lastIndex = 0;
-          const displayUrl = part.length > 50 ? part.slice(0, 47) + '...' : part;
-          return (
-            <a
-              key={i}
-              href={part}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-cyan-400 hover:text-cyan-300 hover:underline"
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              {displayUrl}
-            </a>
-          );
-        }
-        return <span key={i}>{part}</span>;
-      })}
+      {splitUrls(text).map((part, i) =>
+        part.url ? (
+          <a key={i} href={part.url} target="_blank" rel="noopener noreferrer" className={cx(LINK, 'break-all')}>
+            {part.url.length > 60 ? `${part.url.slice(0, 57)}…` : part.url}
+          </a>
+        ) : (
+          <span key={i}>{part.text}</span>
+        ),
+      )}
     </>
   );
 }
 
-function MessageBubble({ msg, isConsecutive, isNew }: { msg: IrcMessage; isConsecutive: boolean; isNew: boolean }) {
-  const avatarColor = getAvatarColor(msg.nick);
-  const isBot = msg.nick.toLowerCase().includes('bot') || msg.nick === 'opendevreview';
-  const isAction = msg.type === 'action';
-
-  if (isAction) {
-    return (
-      <div className="flex items-center gap-2 py-0.5 px-2 text-[#7d8590] text-[10px] italic font-mono">
-        {isNew && <NewItemDot />}
-        <span className="text-[#484f58]">*</span>
-        <span style={{ color: avatarColor }}>{msg.nick}</span>
-        <span>{msg.message}</span>
-      </div>
-    );
-  }
-
+function DateDivider({ day }: { day: Date }) {
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  const label = same(day, today)
+    ? 'Today'
+    : same(day, yesterday)
+      ? 'Yesterday'
+      : day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   return (
-    <div className={`flex gap-2 ${isConsecutive ? 'mt-0' : 'mt-1.5'} group px-1`}>
-      {!isConsecutive ? (
-        <div
-          className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0 font-mono"
-          style={{ backgroundColor: avatarColor }}
-        >
-          {getInitials(msg.nick)}
-        </div>
-      ) : (
-        <div className="w-5 flex-shrink-0" />
-      )}
-      <div className="flex-1 min-w-0">
-        {!isConsecutive && (
-          <div className="flex items-baseline gap-2 mb-0.5">
-            <span
-              className={`text-[10px] font-mono font-medium ${isBot ? 'text-[#484f58]' : ''}`}
-              style={{ color: isBot ? undefined : avatarColor }}
-            >
-              {msg.nick}
-            </span>
-            <span className="text-[9px] text-[#484f58] font-mono">
-              {formatTime(msg.timestamp, msg.time)}
-            </span>
-          </div>
-        )}
-        <div
-          className={`text-xs leading-relaxed ${
-            isBot ? 'text-[#484f58]' : 'text-[#e6edf3]'
-          }`}
-        >
-          {isNew && <NewItemDot />}
-          {renderMessageContent(msg.message)}
-        </div>
-      </div>
-      {isConsecutive && (
-        <span className="text-[9px] text-[#30363d] group-hover:text-[#484f58] transition-colors self-center font-mono">
-          {msg.time}
-        </span>
-      )}
+    <div className="flex items-center gap-2 px-2 pt-2 pb-1" role="separator" aria-label={label}>
+      <span className="shrink-0 text-[11px] font-medium text-fg-3">{label}</span>
+      <span className="h-px flex-1 bg-line" />
     </div>
   );
 }
 
-function DateDivider({ date }: { date: string }) {
-  const dateObj = new Date(date + 'T12:00:00');
-  const formatted = dateObj.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
+function HumanMessage({ entry, showNick, isNew }: { entry: IrcEntry; showNick: boolean; isNew: boolean }) {
+  const { msg, at } = entry;
+  if (msg.type === 'action') {
+    return (
+      <div className="flex items-start gap-2 px-2 py-1">
+        <div className="min-w-0 flex-1 text-[13px] leading-5 text-fg-2 italic [overflow-wrap:anywhere]">
+          {isNew && <NewDot className="mr-1.5 align-middle" />}
+          <span className="font-semibold not-italic">* {msg.nick}</span> <MessageText text={msg.message} />
+        </div>
+        <Time at={at} className="leading-5" />
+      </div>
+    );
+  }
+  return (
+    <div className={cx('flex items-start gap-2 px-2', showNick ? 'pt-1.5 pb-0.5' : 'py-0.5')}>
+      <div className="min-w-0 flex-1">
+        {showNick && (
+          <div className="flex min-w-0 items-center gap-1.5 text-[12px] leading-4 font-semibold text-fg-2">
+            {isNew && <NewDot />}
+            <span className="truncate">{msg.nick}</span>
+          </div>
+        )}
+        <div className="text-[13px] leading-5 text-fg [overflow-wrap:anywhere]">
+          {isNew && !showNick && <NewDot className="mr-1.5 align-middle" />}
+          <MessageText text={msg.message} />
+        </div>
+      </div>
+      <Time at={at} className={showNick ? 'leading-4' : 'leading-5'} />
+    </div>
+  );
+}
+
+/** One compact, muted, single-line bot message (e.g. a Gerrit event) with its change link. */
+function BotLine({ entry, indent }: { entry: IrcEntry; indent?: boolean }) {
+  const { msg, at } = entry;
+  const s = summarizeBotMessage(msg.message);
+  return (
+    <div className={cx('flex items-center gap-2 py-0.5 pr-2 text-[11px] leading-4 text-fg-3', indent ? 'pl-7' : 'pl-2')}>
+      <span className="min-w-0 flex-1 truncate" title={`${msg.nick}: ${msg.message}`}>
+        {s.text}
+      </span>
+      {s.url && (
+        <a href={s.url} target="_blank" rel="noopener noreferrer" className={cx(LINK, 'min-w-[8ch] shrink-0 text-right font-mono')}>
+          {s.linkLabel}
+        </a>
+      )}
+      <Time at={at} />
+    </div>
+  );
+}
+
+/** Consecutive bot messages, collapsed by default into "N patch events". */
+function BotGroup({ entries }: { entries: IrcEntry[] }) {
+  const [open, setOpen] = useState(false);
+  if (entries.length === 1) return <BotLine entry={entries[0]} />;
+
+  const allGerrit = entries.every((e) => e.msg.nick.toLowerCase() === 'opendevreview');
+  const label = `${entries.length} ${allGerrit ? 'patch events' : 'bot messages'}`;
+  const projects = [...new Set(entries.map((e) => summarizeBotMessage(e.msg.message).project).filter(Boolean))];
+  const last = entries[entries.length - 1];
 
   return (
-    <div className="flex items-center gap-2 my-2 px-1">
-      <div className="flex-1 h-px bg-[#21262d]" />
-      <span className="text-[9px] text-[#484f58] font-mono uppercase tracking-wider">{formatted}</span>
-      <div className="flex-1 h-px bg-[#21262d]" />
+    <div>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        title={open ? 'Hide bot messages' : 'Show bot messages'}
+        className="flex w-full items-center gap-2 px-2 py-1 text-left text-[11px] leading-4 text-fg-3 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2 focus-visible:outline-offset-[-2px]"
+      >
+        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={12} className="shrink-0" />
+        <span className="shrink-0 font-medium text-fg-2">{label}</span>
+        {projects.length > 0 && (
+          <span className="min-w-0 flex-1 truncate" title={projects.join(', ')}>
+            {projects.join(', ')}
+          </span>
+        )}
+        {projects.length === 0 && <span className="flex-1" />}
+        <Time at={last.at} />
+      </button>
+      {open && entries.map((e) => <BotLine key={e.msg.id || e.msg.timestamp} entry={e} indent />)}
     </div>
   );
 }
@@ -144,10 +150,10 @@ function DateDivider({ date }: { date: string }) {
 export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
   const channel = (widget.config.channel as string) || '';
   const limit = (widget.config.limit as number) || 20;
-  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const reportWidgetSignals = useDashboardStore((s) => s.reportWidgetSignals);
   const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
-  const { data, isLoading, error } = useIrcMessages({
+  const { data, isLoading, error, refetch } = useIrcMessages({
     dataSourceId: widget.dataSourceId,
     channel,
     limit,
@@ -155,66 +161,35 @@ export function IrcRecentMessages({ widget }: IrcRecentMessagesProps) {
     enabled: !!channel,
   });
 
-  const messages = data?.messages || [];
+  const messages = data?.messages;
+  const items = useMemo(() => buildIrcItems(messages ?? []), [messages]);
+  const newCutoff = getNewItemsCutoff(newItemsHours);
+  const isNew = (e: IrcEntry) => e.at >= newCutoff;
+  // Only human messages count as new: bot lines are Gerrit noise.
+  const newCount = (messages ?? []).filter((m) => !isBotNick(m.nick) && messageDate(m) >= newCutoff).length;
+  const total = messages?.length ?? 0;
 
-  // Track new items (posted within newItemsHours)
-  const prevNewCountRef = useRef<number>(-1);
   useEffect(() => {
-    if (data?.messages) {
-      const cutoffTime = new Date();
-      cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
-      const newCount = data.messages.filter((m) => new Date(m.timestamp) >= cutoffTime).length;
-      if (newCount !== prevNewCountRef.current) {
-        prevNewCountRef.current = newCount;
-        setWidgetNewItemCount(widget.id, newCount);
-      }
-    }
-  }, [data, widget.id, newItemsHours, setWidgetNewItemCount]);
+    if (!messages) return;
+    reportWidgetSignals(widget.id, { total, truncated: false, action: 0, newCount });
+  }, [messages, total, newCount, widget.id, reportWidgetSignals]);
 
-  if (!channel) {
-    return <div className="text-[#7d8590] text-xs font-mono">Configure a channel</div>;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center gap-2 text-[#7d8590] text-xs">
-        <div className="w-3 h-3 border border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-        <span className="font-mono">Loading...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center gap-2 text-red-400 text-xs">
-        <span className="font-mono">Error: {(error as Error).message}</span>
-      </div>
-    );
-  }
-
-  if (messages.length === 0) {
-    return <div className="text-[#7d8590] text-xs font-mono">No recent messages</div>;
-  }
-
-  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
-  let currentDate = '';
-  let lastNick = '';
+  if (!channel) return <WidgetEmpty icon="settings">Configure a channel</WidgetEmpty>;
+  if (isLoading) return <WidgetLoading />;
+  if (error) return <WidgetError message="Couldn't load IRC logs" error={error} onRetry={() => void refetch()} />;
+  if (!messages || messages.length === 0) return <WidgetEmpty>No recent messages</WidgetEmpty>;
 
   return (
-    <div className="space-y-0">
-      {messages.map((msg, idx) => {
-        const showDateDivider = msg.date !== currentDate;
-        const isConsecutive = !showDateDivider && msg.nick === lastNick && msg.type === 'message';
-
-        currentDate = msg.date;
-        lastNick = msg.nick;
-
-        return (
-          <div key={msg.id || idx}>
-            {showDateDivider && <DateDivider date={msg.date} />}
-            <MessageBubble msg={msg} isConsecutive={isConsecutive} isNew={new Date(msg.timestamp) >= newItemsCutoff} />
-          </div>
-        );
+    <div className="flex flex-col pb-1">
+      {items.map((item) => {
+        switch (item.kind) {
+          case 'divider':
+            return <DateDivider key={item.key} day={item.day} />;
+          case 'bots':
+            return <BotGroup key={item.key} entries={item.entries} />;
+          case 'human':
+            return <HumanMessage key={item.key} entry={item.entry} showNick={item.showNick} isNew={isNew(item.entry)} />;
+        }
       })}
     </div>
   );

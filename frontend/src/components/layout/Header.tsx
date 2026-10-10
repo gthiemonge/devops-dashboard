@@ -1,97 +1,172 @@
-import { useDashboardStore } from '../../store/dashboardStore';
+import { useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import type { DashboardExport } from '@dashboard/shared';
+import { useDashboardStore, useCurrentDashboardSignals } from '../../store/dashboardStore';
+import { dashboardsApi } from '../../services/api';
 import { DashboardTabs } from '../dashboard/DashboardTabs';
+import { Alert, Button, Icon } from '../ui';
+import { cx } from '../../lib/cx';
 
-export function Header() {
-  const { openSettings, openWidgetPicker, widgetIssueCounts, widgetNewItemCounts, newItemsHours, isDashboardLocked } = useDashboardStore();
-  const locked = isDashboardLocked();
-
-  // Calculate totals from all tracked widgets
-  const totalIssues = Object.values(widgetIssueCounts).reduce((sum, count) => sum + count, 0);
-  const totalNewItems = Object.values(widgetNewItemCounts).reduce((sum, count) => sum + count, 0);
+/** Current-dashboard signals: "N need action" and "N new (Xh)", each only when > 0. */
+function CurrentSignals() {
+  const { action, newCount } = useCurrentDashboardSignals();
+  const newItemsHours = useDashboardStore((s) => s.newItemsHours);
+  if (action === 0 && newCount === 0) return null;
 
   return (
-    <header className="bg-[#0d1117] border-b border-[#21262d]">
-      {/* Top bar */}
-      <div className="px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {/* Logo/Brand */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-[#e6edf3] tracking-tight">
-                DevOps Dashboard
-              </h1>
-              <p className="text-[10px] text-[#7d8590] font-mono uppercase tracking-wider">
-                OpenStack CI/CD
-              </p>
-            </div>
-          </div>
+    <div className="flex shrink-0 items-center gap-3 text-xs" aria-live="polite">
+      {action > 0 && (
+        <span
+          className="inline-flex h-6 items-center gap-1.5 rounded-full border border-danger/30 bg-danger/10 px-2 text-danger"
+          title={`${action} item${action === 1 ? '' : 's'} need your action on this dashboard`}
+        >
+          <Icon name="alert" size={13} />
+          <span className="font-mono font-semibold tabular-nums">{action}</span>
+          <span className="hidden lg:inline">need action</span>
+        </span>
+      )}
+      {newCount > 0 && (
+        <span
+          className="inline-flex h-6 items-center gap-1.5 text-fg-2"
+          title={`${newCount} new item${newCount === 1 ? '' : 's'} in the last ${newItemsHours}h`}
+        >
+          <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-new" />
+          <span className="font-mono font-semibold tabular-nums text-fg">{newCount}</span>
+          <span className="hidden lg:inline">
+            new <span className="font-mono text-fg-3">({newItemsHours}h)</span>
+          </span>
+        </span>
+      )}
+    </div>
+  );
+}
 
-          {/* Status indicators */}
-          <div className="hidden sm:flex items-center gap-2 ml-4">
-            {/* Issues indicator */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${
-              totalIssues > 0
-                ? 'bg-red-500/10 border-red-500/30'
-                : 'bg-[#161b22] border-[#21262d]'
-            }`}>
-              <span className={`w-2 h-2 rounded-full ${
-                totalIssues > 0 ? 'bg-red-500 pulse-dot' : 'bg-emerald-500'
-              }`}></span>
-              <span className={`text-xs font-mono ${
-                totalIssues > 0 ? 'text-red-400' : 'text-[#7d8590]'
-              }`}>
-                {totalIssues > 0 ? `${totalIssues} issue${totalIssues !== 1 ? 's' : ''}` : 'all clear'}
-              </span>
-            </div>
+export function Header() {
+  const currentDashboardId = useDashboardStore((s) => s.currentDashboardId);
+  const setCurrentDashboard = useDashboardStore((s) => s.setCurrentDashboard);
+  const openSettings = useDashboardStore((s) => s.openSettings);
+  const openWidgetPicker = useDashboardStore((s) => s.openWidgetPicker);
+  const toggleDashboardLock = useDashboardStore((s) => s.toggleDashboardLock);
+  const locked = useDashboardStore((s) =>
+    s.currentDashboardId == null ? true : !s.unlockedDashboardIds[s.currentDashboardId],
+  );
 
-            {/* New items indicator */}
-            {totalNewItems > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 rounded-full border bg-cyan-500/10 border-cyan-500/30">
-                <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
-                <span className="text-xs font-mono text-cyan-400">
-                  {totalNewItems} new ({newItemsHours}h)
-                </span>
-              </div>
-            )}
-          </div>
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    if (!currentDashboardId) return;
+    try {
+      const data = await dashboardsApi.export(currentDashboardId);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dashboard-${data.dashboard.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(`Export failed: ${(err as Error).message}`);
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data: DashboardExport = JSON.parse(text);
+      const newDashboard = await dashboardsApi.import(data);
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      queryClient.invalidateQueries({ queryKey: ['widgets'] });
+      setCurrentDashboard(newDashboard.id);
+      setError(null);
+    } catch (err) {
+      setError(`Import failed: ${(err as Error).message}`);
+    }
+    // Reset input so the same file can be picked again
+    e.target.value = '';
+  };
+
+  return (
+    <header className="relative h-12 border-b border-line bg-surface">
+      <div className="flex h-full items-center gap-3 px-3">
+        {/* Brand */}
+        <div className="flex shrink-0 items-center gap-2 pr-1">
+          <svg viewBox="0 0 20 20" className="size-5 text-accent" fill="currentColor" aria-hidden>
+            <rect x="2" y="2" width="16" height="5" rx="1.5" />
+            <rect x="2" y="9" width="7" height="9" rx="1.5" opacity="0.7" />
+            <rect x="11" y="9" width="7" height="9" rx="1.5" opacity="0.45" />
+          </svg>
+          <span className="hidden text-[13px] font-semibold tracking-tight text-fg xl:inline">DevOps Dashboard</span>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Tabs (scroll horizontally when they don't fit) */}
+        <div className="min-w-0 flex-1 self-stretch">
+          <DashboardTabs />
+        </div>
+
+        <CurrentSignals />
+
+        {/* Actions */}
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="download"
+            aria-label="Export dashboard"
+            onClick={handleExport}
+            disabled={!currentDashboardId}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="upload"
+            aria-label="Import dashboard"
+            onClick={() => fileInputRef.current?.click()}
+          />
+          <input ref={fileInputRef} type="file" accept=".json" onChange={handleFileChange} className="hidden" />
+
+          <span className="mx-1 h-5 w-px bg-line" aria-hidden />
+
           <button
-            onClick={openWidgetPicker}
-            disabled={locked}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+            type="button"
+            onClick={() => currentDashboardId && toggleDashboardLock(currentDashboardId)}
+            disabled={!currentDashboardId}
+            aria-label={locked ? 'Locked: unlock dashboard to edit' : 'Editing: lock dashboard'}
+            title={locked ? 'Unlock dashboard to edit' : 'Lock dashboard'}
+            className={cx(
+              'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition-colors',
+              'disabled:pointer-events-none disabled:opacity-50',
               locked
-                ? 'bg-[#21262d] text-[#484f58] cursor-not-allowed'
-                : 'bg-cyan-600 hover:bg-cyan-500 text-white'
-            }`}
+                ? 'border-line bg-transparent text-fg-2 hover:border-line-strong hover:bg-surface-2 hover:text-fg'
+                : 'border-accent/40 bg-accent/15 text-accent hover:bg-accent/20',
+            )}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add Widget
+            <Icon name={locked ? 'lock' : 'unlock'} size={14} />
+            {locked ? 'Locked' : 'Editing'}
           </button>
-          <button
-            onClick={openSettings}
-            className="p-1.5 text-[#7d8590] hover:text-[#e6edf3] hover:bg-[#21262d] rounded transition-colors"
-            title="Settings"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-            </svg>
-          </button>
+
+          {!locked && (
+            <Button variant="primary" size="sm" icon="plus" onClick={openWidgetPicker}>
+              Add widget
+            </Button>
+          )}
+
+          <Button variant="ghost" size="sm" icon="settings" aria-label="Settings" onClick={openSettings} />
         </div>
       </div>
 
-      {/* Tabs bar */}
-      <div className="px-4 border-t border-[#21262d]">
-        <DashboardTabs />
-      </div>
+      {error && (
+        <div className="absolute right-3 top-full z-50 mt-2 w-96 max-w-[calc(100vw-1.5rem)] rounded-md bg-surface shadow-lg shadow-canvas">
+          <Alert tone="danger" onDismiss={() => setError(null)}>
+            {error}
+          </Alert>
+        </div>
+      )}
     </header>
   );
 }

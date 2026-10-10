@@ -1,5 +1,5 @@
 import { BaseProvider, ProviderConfig } from './base.provider.js';
-import type { GerritChange } from '@dashboard/shared';
+import type { GerritAccount, GerritChange } from '@dashboard/shared';
 
 export class GerritProvider extends BaseProvider {
   protected serviceName = 'gerrit' as const;
@@ -26,6 +26,20 @@ export class GerritProvider extends BaseProvider {
 
     const path = `${this.getApiPath()}/changes/?${params.toString()}`;
     return this.fetch<GerritChange[]>(path);
+  }
+
+  /**
+   * The authenticated account (/a/accounts/self). Returns null when no credentials are
+   * configured or Gerrit rejects them (401/403); other errors are thrown.
+   */
+  async getSelf(): Promise<GerritAccount | null> {
+    if (!this.config.username || !this.config.password) return null;
+    try {
+      return await this.fetch<GerritAccount>('/a/accounts/self');
+    } catch (err) {
+      if (/^HTTP (401|403)\b/.test((err as Error).message)) return null;
+      throw err;
+    }
   }
 
   async getRecentChanges(project: string, limit: number = 10): Promise<GerritChange[]> {

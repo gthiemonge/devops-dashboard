@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import db from '../db/database.js';
 import { GerritProvider, ZuulProvider, IrcProvider, LaunchpadProvider } from '../providers/index.js';
 import { cacheService } from '../services/cache.service.js';
-import type { ApiResponse, GerritChange, ZuulBuild, IrcMessage, LaunchpadBugWithTask, LaunchpadBugStatus } from '@dashboard/shared';
+import type { ApiResponse, GerritAccount, GerritChange, ZuulBuild, IrcMessage, LaunchpadBugWithTask, LaunchpadBugStatus } from '@dashboard/shared';
 
 export const proxyRouter = Router();
 
@@ -52,6 +52,43 @@ proxyRouter.get('/gerrit/changes', async (req: Request, res: Response) => {
     );
 
     const response: ApiResponse<GerritChange[]> = { success: true, data: changes };
+    res.json(response);
+  } catch (err) {
+    const response: ApiResponse<null> = { success: false, error: (err as Error).message };
+    res.status(500).json(response);
+  }
+});
+
+// Authenticated Gerrit account (data: null when there are no/invalid credentials)
+const GERRIT_SELF_TTL = 6 * 60 * 60; // seconds; the account rarely changes
+const GERRIT_SELF_NULL_TTL = 5 * 60; // retry sooner when unauthenticated
+
+proxyRouter.get('/gerrit/self', async (req: Request, res: Response) => {
+  try {
+    const dataSourceId = parseInt(req.query.dataSourceId as string) || 1;
+
+    const dataSource = getDataSource(dataSourceId);
+    if (!dataSource || dataSource.type !== 'gerrit') {
+      const response: ApiResponse<null> = { success: false, error: 'Gerrit data source not found' };
+      res.status(404).json(response);
+      return;
+    }
+
+    const credential = getCredential(dataSourceId);
+    // Key includes base URL + username so changing either invalidates the cached account
+    const cacheKey = `gerrit:self:${dataSourceId}:${dataSource.base_url}:${credential?.username ?? ''}`;
+    let account = cacheService.get<GerritAccount | null>(cacheKey);
+    if (account === undefined) {
+      const provider = new GerritProvider({
+        baseUrl: dataSource.base_url,
+        username: credential?.username,
+        password: credential?.password,
+      });
+      account = await provider.getSelf();
+      cacheService.set(cacheKey, account, account ? GERRIT_SELF_TTL : GERRIT_SELF_NULL_TTL);
+    }
+
+    const response: ApiResponse<GerritAccount | null> = { success: true, data: account };
     res.json(response);
   } catch (err) {
     const response: ApiResponse<null> = { success: false, error: (err as Error).message };
@@ -164,12 +201,15 @@ proxyRouter.get('/launchpad/bugs', async (req: Request, res: Response) => {
       ? tagsParam.split(',').map((t) => t.trim()).filter((t) => t.length > 0)
       : undefined;
 
-    const cacheKey = `launchpad:bugs:${dataSourceId}:${project}:${statusesParam || 'default'}:${sortBy}:${limit}:${fetchTags}:${tagsParam || 'no-tags'}`;
+    const cacheKey = `launchpad:bugs+total:${dataSourceId}:${project}:${statusesParam || 'default'}:${sortBy}:${limit}:${fetchTags}:${tagsParam || 'no-tags'}`;
 
-    const bugs = await cacheService.getOrSet<LaunchpadBugWithTask[]>(cacheKey, () =>
-      provider.getBugTasks({ project, statuses, limit, sortBy, fetchTags, tags })
+    const { bugs, totalSize } = await cacheService.getOrSet(cacheKey, () =>
+      provider.getBugTasksWithTotal({ project, statuses, limit, sortBy, fetchTags, tags })
     );
 
+    // Body stays a plain array; the number of matching bugs on Launchpad (before `limit`)
+    // goes in a header so the widget can show "20 of 119".
+    res.setHeader('X-Total-Count', String(totalSize));
     const response: ApiResponse<LaunchpadBugWithTask[]> = { success: true, data: bugs };
     res.json(response);
   } catch (err) {

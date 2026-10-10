@@ -3,7 +3,7 @@ import { Dashboard } from './components/dashboard/Dashboard';
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen bg-canvas text-fg">
       <Header />
       <Dashboard />
     </div>

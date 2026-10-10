@@ -26,6 +26,16 @@ const IMPORTANCE_ORDER: Record<LaunchpadBugImportance, number> = {
   'Undecided': 5,
 };
 
+export interface LaunchpadBugsResult {
+  bugs: LaunchpadBugWithTask[];
+  /**
+   * Number of matching bug tasks on Launchpad before `limit` (the collection's total_size).
+   * With a tags filter, the number of tagged matches found among the enriched candidates
+   * (a lower bound).
+   */
+  totalSize: number;
+}
+
 const STATUS_ORDER: Record<LaunchpadBugStatus, number> = {
   'In Progress': 0,
   'Triaged': 1,
@@ -55,6 +65,11 @@ export class LaunchpadProvider extends BaseProvider {
   }
 
   async getBugTasks(query: LaunchpadBugsQuery): Promise<LaunchpadBugWithTask[]> {
+    return (await this.getBugTasksWithTotal(query)).bugs;
+  }
+
+  /** Like getBugTasks, but also returns the total number of matching tasks. */
+  async getBugTasksWithTotal(query: LaunchpadBugsQuery): Promise<LaunchpadBugsResult> {
     const { project, statuses, limit = 10, sortBy = 'id', fetchTags = false, tags } = query;
 
     const params = new URLSearchParams();
@@ -81,6 +96,8 @@ export class LaunchpadProvider extends BaseProvider {
 
     const path = `/${project}?${params.toString()}`;
     const response = await this.fetch<LaunchpadCollectionResponse>(path);
+
+    let totalSize = typeof response.total_size === 'number' ? response.total_size : response.entries.length;
 
     let tasks: LaunchpadBugWithTask[] = response.entries.map((task) => ({
       ...task,
@@ -111,13 +128,14 @@ export class LaunchpadProvider extends BaseProvider {
             task.bug!.tags.some((bugTag) => bugTag.toLowerCase() === requiredTag.toLowerCase())
           );
         });
+        totalSize = tasks.length;
       }
     }
 
     // Limit results after filtering
     tasks = tasks.slice(0, limit);
 
-    return tasks;
+    return { bugs: tasks, totalSize };
   }
 
   private sortTasks(tasks: LaunchpadBugWithTask[], sortBy: 'id' | 'status' | 'importance'): LaunchpadBugWithTask[] {

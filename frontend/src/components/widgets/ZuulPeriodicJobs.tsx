@@ -1,50 +1,127 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useZuulBuilds } from '../../hooks/useZuulBuilds';
 import { useDashboardStore } from '../../store/dashboardStore';
-import { NewItemDot, getNewItemsCutoff } from './NewItemDot';
-import type { Widget, ZuulBuild } from '@dashboard/shared';
+import { Chip, MetaItem, MetaLine, NewDot, RowLink, RowTitle, WidgetEmpty, WidgetError, WidgetLoading } from '../ui';
+import { formatAbsolute, formatDuration, formatRelative } from '../../lib/format';
+import { getNewItemsCutoff } from '../../lib/newItems';
+import { cx } from '../../lib/cx';
+import { compareGroups, groupBuilds, latestProblem, type ZuulJobGroup, type ZuulRun } from './zuul/groupBuilds';
+import type { Widget } from '@dashboard/shared';
 
 interface ZuulPeriodicJobsProps {
   widget: Widget;
 }
 
-function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) return `${hours}h${minutes}m`;
-  return `${minutes}m`;
+/** Number of recent results drawn in the streak sparkline. */
+const SPARK_RUNS = 12;
+const SPARK_RUNS_NARROW = 6;
+
+/** "3d ago" / "on Sep 1" / "just now" from formatRelative output. */
+function ago(time: number): string {
+  const rel = formatRelative(time);
+  if (rel === 'now') return 'just now';
+  return /^\d/.test(rel) ? `${rel} ago` : `on ${rel}`;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffHours < 1) return 'now';
-  if (diffHours < 24) return `${diffHours}h`;
-  if (diffDays < 7) return `${diffDays}d`;
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function runTitle(run: ZuulRun): string {
+  const duration = formatDuration(run.build.duration);
+  return `${run.build.result} · ${formatAbsolute(run.time)}${duration ? ` · ${duration}` : ''}`;
 }
 
-function getResultBadge(result: string): { label: string; className: string; borderClass: string } {
-  switch (result) {
-    case 'FAILURE':
-      return { label: 'FAIL', className: 'bg-red-500/20 text-red-400 border-red-500/30', borderClass: 'border-red-500/50 hover:border-red-500' };
-    case 'POST_FAILURE':
-      return { label: 'POST', className: 'bg-orange-500/20 text-orange-400 border-orange-500/30', borderClass: 'border-orange-500/50 hover:border-orange-500' };
-    case 'RETRY_LIMIT':
-      return { label: 'RETRY', className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', borderClass: 'border-yellow-500/50 hover:border-yellow-500' };
-    case 'TIMED_OUT':
-      return { label: 'T/OUT', className: 'bg-purple-500/20 text-purple-400 border-purple-500/30', borderClass: 'border-purple-500/50 hover:border-purple-500' };
-    case 'NODE_FAILURE':
-      return { label: 'NODE', className: 'bg-rose-500/20 text-rose-400 border-rose-500/30', borderClass: 'border-rose-500/50 hover:border-rose-500' };
-    case 'ERROR':
-      return { label: 'ERR', className: 'bg-red-600/20 text-red-500 border-red-600/30', borderClass: 'border-red-600/50 hover:border-red-600' };
-    default:
-      return { label: result.slice(0, 4), className: 'bg-gray-500/20 text-gray-400 border-gray-500/30', borderClass: 'border-gray-500/50 hover:border-gray-500' };
+/** Recent results as tiny squares, oldest → newest (left → right). */
+function StreakSparkline({ runs }: { runs: ZuulRun[] }) {
+  const recent = runs.slice(0, SPARK_RUNS).reverse();
+  const count = (outcome: ZuulRun['outcome']) => recent.filter((r) => r.outcome === outcome).length;
+  return (
+    <span
+      className="flex shrink-0 items-center gap-px"
+      role="img"
+      aria-label={`Last ${recent.length} runs: ${count('fail')} failed, ${count('retry')} retried, ${count('pass')} passed`}
+    >
+      {recent.map((run, i) => (
+        <span
+          key={run.build.uuid}
+          title={runTitle(run)}
+          className={cx(
+            'size-1.5 rounded-[1px]',
+            run.outcome === 'fail' ? 'bg-danger' : run.outcome === 'retry' ? 'bg-warn' : 'bg-ok/70',
+            // Narrow widget: only the newest SPARK_RUNS_NARROW runs.
+            i < recent.length - SPARK_RUNS_NARROW && 'hidden @xs:block',
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+
+function ZuulJobRow({ group, isNew, retries }: { group: ZuulJobGroup; isNew: boolean; retries: number }) {
+  const problem = latestProblem(group);
+  const link = problem?.build.log_url || undefined;
+  const latestDuration = formatDuration(group.latest.build.duration);
+
+  let health: string;
+  let healthTitle: string | undefined;
+  if (group.lastSuccess) {
+    health = `last success ${ago(group.lastSuccess.time)}`;
+    healthTitle = formatAbsolute(group.lastSuccess.time);
+  } else {
+    const n = group.completedRuns;
+    health = `no success in ${n} run${n === 1 ? '' : 's'}`;
+    healthTitle = `No successful run among the ${n} most recent builds fetched`;
   }
+
+  return (
+    <RowLink
+      href={link}
+      dimmed={!group.voting}
+      title={problem ? `Latest ${problem.outcome === 'retry' ? 'retry' : 'failure'}: ${problem.build.result} · ${formatAbsolute(problem.time)}` : undefined}
+    >
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {isNew && <NewDot title="Failed or retried recently" />}
+          {/* Truncate from the start: job names share long prefixes, the suffix tells them apart. */}
+          <RowTitle dir="rtl" className="text-left" title={group.jobName}>
+            <span dir="ltr">{group.jobName}</span>
+          </RowTitle>
+        </div>
+        <MetaLine>
+          <MetaItem title="Branch">{group.branch}</MetaItem>
+          <MetaItem
+            truncate
+            title={healthTitle}
+            className={cx(!group.lastSuccess && group.voting && 'text-danger')}
+          >
+            {health}
+          </MetaItem>
+          {latestDuration && (
+            <MetaItem mono title="Duration of the latest run">
+              {latestDuration}
+            </MetaItem>
+          )}
+        </MetaLine>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="flex items-center gap-1">
+          {!group.voting && (
+            <Chip variant="neutral" title="Non-voting job">
+              NV
+            </Chip>
+          )}
+          {retries > 0 && (
+            <Chip variant="warn" icon="refresh" title={`Retried ${retries} time${retries === 1 ? '' : 's'} (automatic Zuul retry)`}>
+              {retries}
+            </Chip>
+          )}
+          {group.streak > 0 && (
+            <Chip variant="danger" title={`Failed ${group.streak} time${group.streak === 1 ? '' : 's'} in a row`}>
+              ×{group.streak}
+            </Chip>
+          )}
+        </div>
+        <StreakSparkline runs={group.runs} />
+      </div>
+    </RowLink>
+  );
 }
 
 export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
@@ -52,119 +129,60 @@ export function ZuulPeriodicJobs({ widget }: ZuulPeriodicJobsProps) {
   const pipeline = (widget.config.pipeline as string) || 'periodic';
   const limit = (widget.config.limit as number) || 10;
   const days = (widget.config.days as number) || 7;
-  const setWidgetIssueCount = useDashboardStore((s) => s.setWidgetIssueCount);
-  const setWidgetNewItemCount = useDashboardStore((s) => s.setWidgetNewItemCount);
+  const reportWidgetSignals = useDashboardStore((s) => s.reportWidgetSignals);
   const newItemsHours = useDashboardStore((s) => s.newItemsHours);
 
-  const successResults = ['SUCCESS', 'SKIPPED', 'ABORTED'];
-
-  const { data: rawBuilds, isLoading, error } = useZuulBuilds({
+  const { data: rawBuilds, isLoading, error, refetch } = useZuulBuilds({
     dataSourceId: widget.dataSourceId,
     project,
     pipeline,
-    limit: limit * 20, // Fetch enough to find failures among successes
+    // All results (passes included, for streaks / last success); ~2 weeks of a daily pipeline.
+    limit: limit * 20,
     refreshInterval: widget.refreshInterval,
   });
 
-  // Filter out successful builds, then apply date range and limit
-  const builds = rawBuilds
-    ? rawBuilds
-        .filter((build) => {
-          if (successResults.includes(build.result)) return false;
-          const buildDate = new Date(build.end_time);
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - days);
-          return buildDate >= cutoffDate;
-        })
-        .slice(0, limit)
-    : [];
+  // One row per (job, branch) whose latest failure or retry is within `days`.
+  const { groups, truncated, action, cutoff } = useMemo(() => {
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    if (!rawBuilds) return { groups: [] as ZuulJobGroup[], truncated: false, action: 0, cutoff };
+    const recent = groupBuilds(rawBuilds)
+      .filter((g) => (latestProblem(g)?.time ?? 0) >= cutoff)
+      .sort(compareGroups);
+    return {
+      groups: recent.slice(0, limit),
+      truncated: recent.length > limit,
+      // Retries are a warning, not an action: only failing voting jobs count.
+      action: recent.filter((g) => g.voting && g.streak > 0).length,
+      cutoff,
+    };
+  }, [rawBuilds, days, limit]);
 
-  // Report issue count (failed builds within date range)
+  const newCutoff = getNewItemsCutoff(newItemsHours).getTime();
+  const isNew = (g: ZuulJobGroup) => (latestProblem(g)?.time ?? 0) >= newCutoff;
+  const recentRetries = (g: ZuulJobGroup) => g.retries.filter((r) => r.time >= cutoff).length;
+  const newCount = groups.filter(isNew).length;
+
   useEffect(() => {
-    setWidgetIssueCount(widget.id, builds.length);
-  }, [builds.length, widget.id, setWidgetIssueCount]);
+    if (!rawBuilds) return;
+    reportWidgetSignals(widget.id, { total: groups.length, truncated, action, newCount });
+  }, [rawBuilds, groups.length, truncated, action, newCount, widget.id, reportWidgetSignals]);
 
-  // Track new items (completed within newItemsHours)
-  const prevNewCountRef = useRef<number>(-1);
-  useEffect(() => {
-    const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - newItemsHours);
-    const newCount = builds.filter((b) => new Date(b.end_time) >= cutoffTime).length;
-    if (newCount !== prevNewCountRef.current) {
-      prevNewCountRef.current = newCount;
-      setWidgetNewItemCount(widget.id, newCount);
-    }
-  }, [builds, widget.id, newItemsHours, setWidgetNewItemCount]);
-
-  if (isLoading) {
+  if (isLoading) return <WidgetLoading />;
+  if (error) return <WidgetError message="Couldn't load Zuul builds" error={error} onRetry={() => void refetch()} />;
+  if (!rawBuilds || rawBuilds.length === 0) return <WidgetEmpty>No builds found</WidgetEmpty>;
+  if (groups.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-[#7d8590] text-xs">
-        <div className="w-3 h-3 border border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-        <span className="font-mono">Loading...</span>
-      </div>
+      <WidgetEmpty tone="ok">
+        No failures or retries in the last {days} day{days === 1 ? '' : 's'}
+      </WidgetEmpty>
     );
   }
-
-  if (error) {
-    return (
-      <div className="flex items-center gap-2 text-red-400 text-xs">
-        <span className="font-mono">Error: {(error as Error).message}</span>
-      </div>
-    );
-  }
-
-  if (!builds || builds.length === 0) {
-    return (
-      <div className="flex items-center gap-2 text-emerald-400 text-xs">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-        <span className="font-mono">All jobs passing</span>
-      </div>
-    );
-  }
-
-  const newItemsCutoff = getNewItemsCutoff(newItemsHours);
 
   return (
-    <div className="space-y-0.5">
-      {builds.map((build: ZuulBuild) => {
-        const badge = getResultBadge(build.result);
-        return (
-        <a
-          key={build.uuid}
-          href={build.log_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`block px-2 py-1.5 rounded hover:bg-[#161b22] transition-colors group border-l-2 ${badge.borderClass}`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-[#e6edf3] truncate group-hover:text-amber-400 transition-colors font-mono">
-                {new Date(build.end_time) >= newItemsCutoff && <NewItemDot />}
-                {build.job_name}
-              </p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[10px] text-amber-400/70 font-mono">
-                  {build.ref.branch}
-                </span>
-                <span className="text-[#484f58]">·</span>
-                <span className="text-[10px] text-[#7d8590] font-mono">
-                  {formatDuration(build.duration)}
-                </span>
-                <span className="text-[#484f58]">·</span>
-                <span className="text-[10px] text-[#484f58] font-mono">
-                  {formatDate(build.end_time)}
-                </span>
-              </div>
-            </div>
-            <span className={`px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${badge.className}`}>
-              {badge.label}
-            </span>
-          </div>
-        </a>
-        );
-      })}
+    <div className="@container flex flex-col">
+      {groups.map((group) => (
+        <ZuulJobRow key={group.key} group={group} isNew={isNew(group)} retries={recentRetries(group)} />
+      ))}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import type {
   UpdateWidgetDto,
   Layout,
   UpdateLayoutDto,
+  GerritAccount,
   GerritChange,
   ZuulBuild,
   IrcMessage,
@@ -111,6 +112,11 @@ export const proxyApi = {
     if (params.n) searchParams.append('n', params.n.toString());
     return request<GerritChange[]>(`/proxy/gerrit/changes?${searchParams.toString()}`);
   },
+  getGerritSelf: (params: { dataSourceId?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
+    return request<GerritAccount | null>(`/proxy/gerrit/self?${searchParams.toString()}`);
+  },
   getZuulBuilds: (params: { dataSourceId?: number; project?: string; pipeline?: string; result?: string; results?: string[]; limit?: number }) => {
     const searchParams = new URLSearchParams();
     if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());
@@ -152,9 +158,26 @@ export const proxyApi = {
     if (params.tags && params.tags.length > 0) {
       searchParams.append('tags', params.tags.join(','));
     }
-    return request<LaunchpadBugWithTask[]>(`/proxy/launchpad/bugs?${searchParams.toString()}`);
+    return requestLaunchpadBugs(`/proxy/launchpad/bugs?${searchParams.toString()}`);
   },
 };
+
+/** Launchpad bugs plus `totalSize`: matching bugs on Launchpad before the limit (X-Total-Count). */
+export interface LaunchpadBugsPage {
+  bugs: LaunchpadBugWithTask[];
+  totalSize: number | null;
+}
+
+async function requestLaunchpadBugs(path: string): Promise<LaunchpadBugsPage> {
+  const response = await fetch(`${API_BASE}${path}`, { headers: { 'Content-Type': 'application/json' } });
+  const data: ApiResponse<LaunchpadBugWithTask[]> = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || 'Unknown error');
+  }
+  const header = response.headers.get('X-Total-Count');
+  const total = header != null ? Number(header) : NaN;
+  return { bugs: data.data ?? [], totalSize: Number.isFinite(total) ? total : null };
+}
 
 export const summaryApi = {
   get: () => request<DashboardSummary>('/summary'),
