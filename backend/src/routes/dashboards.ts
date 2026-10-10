@@ -13,11 +13,6 @@ interface DbDashboard {
   updated_at: string;
 }
 
-interface DbWidgetCount {
-  dashboard_id: number;
-  widget_count: number;
-}
-
 interface DbWidget {
   id: number;
   dashboard_id: number;

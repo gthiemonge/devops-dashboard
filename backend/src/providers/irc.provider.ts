@@ -132,7 +132,7 @@ export class IrcProvider {
     // Start with today and go backwards
     const today = new Date();
     const todayStr = this.formatDate(today);
-    let currentDate = new Date(today);
+    const currentDate = new Date(today);
     let daysChecked = 0;
     const maxDays = 5; // Don't go back more than 5 days
 
