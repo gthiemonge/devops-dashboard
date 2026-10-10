@@ -10,7 +10,8 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w backend\" \"npm run dev -w frontend\"",
     "build": "npm run build -w shared && npm run build -w backend && npm run build -w frontend",
-    "lint": "npm run lint -w backend && npm run lint -w frontend"
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "test": "npm run test -w frontend"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
