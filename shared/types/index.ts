@@ -187,7 +187,7 @@ export interface ZuulBuild {
   log_url: string;
   event_id: string;
   ref: ZuulBuildRef;
-  /** false for builds Zuul will retry automatically (result RETRY); ignore those. */
+  /** false for builds Zuul retries automatically (result RETRY); shown as warnings. */
   final?: boolean;
   /** false for non-voting jobs. */
   voting?: boolean;
@@ -272,22 +272,6 @@ export interface PaginatedResponse<T> {
 }
 
 // Summary Types
-export interface WidgetSummary {
-  widgetId: number;
-  type: WidgetType;
-  title: string;
-  count: number;
-  urgent: number;
-  lastUpdated: string;
-}
-
-export interface DashboardSummary {
-  widgets: WidgetSummary[];
-  totalItems: number;
-  totalUrgent: number;
-  lastUpdated: string;
-}
-
 // Create/Update DTOs
 export interface CreateDataSourceDto {
   name: string;

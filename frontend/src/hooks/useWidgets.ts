@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { widgetsApi, dataSourcesApi, summaryApi, dashboardsApi } from '../services/api';
+import { widgetsApi, dataSourcesApi, dashboardsApi } from '../services/api';
 import { useDashboardStore } from '../store/dashboardStore';
 import type { CreateWidgetDto, UpdateWidgetDto, LayoutItem } from '@dashboard/shared';
 import { useEffect } from 'react';
@@ -40,14 +40,6 @@ export function useDataSources() {
   return query;
 }
 
-export function useSummary() {
-  return useQuery({
-    queryKey: ['summary'],
-    queryFn: summaryApi.get,
-    refetchInterval: 60000,
-  });
-}
-
 export function useCreateWidget() {
   const queryClient = useQueryClient();
   const { addWidget, layout, setLayout, currentDashboardId, updateDashboard } = useDashboardStore();
@@ -83,7 +75,6 @@ export function useCreateWidget() {
 
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
     },
   });
 }
@@ -98,7 +89,6 @@ export function useUpdateWidget() {
     onSuccess: (widget) => {
       updateWidget(widget.id, widget);
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
     },
   });
 }
@@ -122,7 +112,6 @@ export function useDeleteWidget() {
 
       queryClient.invalidateQueries({ queryKey: ['widgets'] });
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
-      queryClient.invalidateQueries({ queryKey: ['summary'] });
     },
   });
 }

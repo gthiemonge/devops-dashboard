@@ -22,7 +22,6 @@ import type {
   IrcMessage,
   LaunchpadBugWithTask,
   LaunchpadBugStatus,
-  DashboardSummary,
 } from '@dashboard/shared';
 
 const API_BASE = '/api/v1';
@@ -180,7 +179,3 @@ async function requestLaunchpadBugs(path: string): Promise<LaunchpadBugsPage> {
   const total = header != null ? Number(header) : NaN;
   return { bugs: data.data ?? [], totalSize: Number.isFinite(total) ? total : null };
 }
-
-export const summaryApi = {
-  get: () => request<DashboardSummary>('/summary'),
-};

@@ -11,7 +11,6 @@ import { credentialsRouter } from './routes/credentials.js';
 import { widgetsRouter } from './routes/widgets.js';
 import { layoutRouter } from './routes/layout.js';
 import { proxyRouter } from './routes/proxy.js';
-import { summaryRouter } from './routes/summary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,7 +28,6 @@ app.use('/api/v1/credentials', credentialsRouter);
 app.use('/api/v1/widgets', widgetsRouter);
 app.use('/api/v1/layout', layoutRouter);
 app.use('/api/v1/proxy', proxyRouter);
-app.use('/api/v1/summary', summaryRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

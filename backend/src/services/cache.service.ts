@@ -49,7 +49,7 @@ class CacheService {
     const cached = this.get<T>(key);
     if (cached !== undefined) {
       let service: 'gerrit' | 'zuul' | 'irc' | 'launchpad' = 'zuul';
-      if (key.startsWith('gerrit') || key.startsWith('summary:gerrit')) service = 'gerrit';
+      if (key.startsWith('gerrit')) service = 'gerrit';
       else if (key.startsWith('irc')) service = 'irc';
       else if (key.startsWith('launchpad')) service = 'launchpad';
       logApiCall({
