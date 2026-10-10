@@ -20,7 +20,7 @@ export interface GerritChangeListProps {
   unconfigured?: string;
   /** Owner column in the meta line (off for owner-scoped widgets). */
   showOwner?: boolean;
-  /** Every row needs the user's action (My changes); otherwise only APPROVE rows. */
+  /** Every row needs the user's action (My changes with negative votes); otherwise only APPROVE rows. */
   allRowsActionable?: boolean;
   emptyMessage: string;
   emptyTone?: 'ok' | 'neutral';

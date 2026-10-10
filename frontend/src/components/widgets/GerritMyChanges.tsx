@@ -9,7 +9,7 @@ interface GerritMyChangesProps {
 export function GerritMyChanges({ widget }: GerritMyChangesProps) {
   const limit = (widget.config.limit as number) || 10;
   const customQuery = (widget.config.query as string) || '';
-  const baseQuery = 'owner:self (label:Code-Review<0 OR label:Verified<0)';
+  const baseQuery = 'owner:self status:open (label:Code-Review<0 OR label:Verified<0)';
   const query = customQuery ? `${baseQuery} ${customQuery}` : baseQuery;
 
   return (
@@ -20,7 +20,7 @@ export function GerritMyChanges({ widget }: GerritMyChangesProps) {
       showOwner={false}
       allRowsActionable
       emptyTone="ok"
-      emptyMessage="Nothing needs your attention"
+      emptyMessage="None of your changes has a negative vote"
     />
   );
 }

@@ -37,7 +37,7 @@ npm run build   # production build of shared, backend and frontend
 - **Needs-action and new-item signals**: each widget header shows its item count and how many
   items need your action; the top bar sums them for the current dashboard, and new items (within a
   configurable window) are marked with a dot.
-- **Gerrit widgets**: recent changes of projects/branches, your changes needing attention, another
+- **Gerrit widgets**: recent changes of projects/branches, your open changes with negative votes, another
   user's changes, and custom queries. Each change shows one action chip (`APPROVE` when ready for
   your Workflow +1, `CONFLICT`, `CI-1`, `ATTN` when you are in its attention set), compact votes
   (`CR+2×2`, `CR-1`, `W+1`, your own vote outlined), unresolved comments, size and patch set.

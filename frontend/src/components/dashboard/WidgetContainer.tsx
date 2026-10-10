@@ -72,7 +72,7 @@ function generateGerritSearchUrl(type: WidgetType, config: WidgetConfig, gerritU
   }
 
   if (type === 'gerrit_my_changes') {
-    return `${baseUrl}owner:self+(label:Code-Review<0+OR+label:Verified<0)`;
+    return `${baseUrl}owner:self+status:open+(label:Code-Review<0+OR+label:Verified<0)`;
   }
 
   return null;
@@ -112,7 +112,7 @@ function generateTitle(type: WidgetType, config: WidgetConfig): string {
       return shortProject ? `${prefix}: ${shortProject}${branchSuffix}` : 'Recent changes';
     }
     case 'gerrit_my_changes':
-      return 'My changes';
+      return 'My changes with negative votes';
     case 'gerrit_user_changes':
       return owner ? `Changes: ${owner}` : "User's changes";
     case 'zuul_periodic_jobs': {

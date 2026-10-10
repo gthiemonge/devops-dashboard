@@ -23,8 +23,8 @@ export const WIDGET_TYPES: WidgetTypeOption[] = [
   },
   {
     type: 'gerrit_my_changes',
-    name: 'My changes',
-    description: 'Your own changes that got a negative review or CI vote.',
+    name: 'My changes with negative votes',
+    description: 'Your open changes with a negative Code-Review or CI (Verified) vote.',
     sourceType: 'gerrit',
     defaultConfig: { limit: 10 },
   },
@@ -87,7 +87,7 @@ export function generateTitle(type: WidgetType, config: Record<string, unknown>)
     case 'gerrit_recent_changes':
       return shortProject ? `Changes: ${shortProject}` : 'Recent Changes';
     case 'gerrit_my_changes':
-      return 'My Changes';
+      return 'My Changes with Negative Votes';
     case 'gerrit_user_changes':
       return owner ? `Changes: ${owner}` : "User's Changes";
     case 'gerrit_custom_query':

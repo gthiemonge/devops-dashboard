@@ -61,7 +61,7 @@ export function CredentialsSettings() {
   return (
     <div className="space-y-4">
       <p className="text-[13px] text-fg-2">
-        Credentials for authenticated access to a data source (required by “My changes” widgets).
+        Credentials for authenticated access to a data source (required by “My changes with negative votes” widgets and to show your own votes).
       </p>
 
       {credentialsError && (
