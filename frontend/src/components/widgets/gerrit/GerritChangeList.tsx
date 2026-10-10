@@ -6,7 +6,7 @@ import { useDashboardStore } from '../../../store/dashboardStore';
 import { getNewItemsCutoff } from '../../../lib/newItems';
 import { WidgetEmpty, WidgetError, WidgetLoading } from '../../ui';
 import { GerritChangeRow } from './GerritChangeRow';
-import { buildChangeViews } from './changeState';
+import { buildChangeViews, parseSortBy } from './changeState';
 
 const OWNER_MIN_WIDTH = 320; // px (the owner truncates first, so it fits 3-column widgets)
 const PATCHSET_MIN_WIDTH = 300;
@@ -65,9 +65,10 @@ export function GerritChangeList({
   const selfId = self?._account_id;
 
   // Recomputed on each data refresh (the cutoff moves with time only then; good enough).
+  const sortBy = parseSortBy(widget.config.sortBy);
   const views = useMemo(
-    () => (changes ? buildChangeViews(changes, selfId, getNewItemsCutoff(newItemsHours)) : []),
-    [changes, selfId, newItemsHours],
+    () => (changes ? buildChangeViews(changes, selfId, getNewItemsCutoff(newItemsHours), sortBy) : []),
+    [changes, selfId, newItemsHours, sortBy],
   );
 
   useEffect(() => {

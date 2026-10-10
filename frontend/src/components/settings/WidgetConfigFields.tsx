@@ -241,6 +241,18 @@ export function WidgetConfigFields({
         </>
       )}
 
+      {type.startsWith('gerrit_') && (
+        <Field
+          label="Sort by"
+          hint="Priority: ready to approve, attention set, not yet reviewed, reviewed, blocked, then WIP / bot changes."
+        >
+          <Select value={str('sortBy') || 'updated'} onChange={(e) => set('sortBy', e.target.value)}>
+            <option value="updated">Last updated</option>
+            <option value="priority">Priority (actionable first)</option>
+          </Select>
+        </Field>
+      )}
+
       <div className="grid grid-cols-2 gap-4 border-t border-line pt-4">
         <Field label="Max items">
           <Input

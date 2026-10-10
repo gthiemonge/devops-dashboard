@@ -212,8 +212,23 @@ export function isNewChange(change: GerritChange, cutoff: Date, selfId?: number)
   return parseGerritDate(change.created) >= cutoff;
 }
 
-/** Decorates and sorts changes: by group, then `updated` desc (stable). */
-export function buildChangeViews(changes: GerritChange[], selfId: number | undefined, newCutoff: Date): ChangeView[] {
+export type GerritSortBy = 'updated' | 'priority';
+
+/** The widget's `sortBy` setting; anything else (including unset) means "last updated". */
+export function parseSortBy(value: unknown): GerritSortBy {
+  return value === 'priority' ? 'priority' : 'updated';
+}
+
+/**
+ * Decorates and sorts changes: by `updated` desc, or with 'priority' by group first (see
+ * sortGroup). Stable: ties keep Gerrit's order.
+ */
+export function buildChangeViews(
+  changes: GerritChange[],
+  selfId: number | undefined,
+  newCutoff: Date,
+  sortBy: GerritSortBy = 'updated',
+): ChangeView[] {
   const views = changes.map((change, index) => {
     const action = getActionInfo(change, selfId);
     return {
@@ -228,6 +243,7 @@ export function buildChangeViews(changes: GerritChange[], selfId: number | undef
       index,
     };
   });
-  views.sort((a, b) => a.view.group - b.view.group || b.updated - a.updated || a.index - b.index);
+  const byGroup = sortBy === 'priority';
+  views.sort((a, b) => (byGroup ? a.view.group - b.view.group : 0) || b.updated - a.updated || a.index - b.index);
   return views.map((v) => v.view);
 }

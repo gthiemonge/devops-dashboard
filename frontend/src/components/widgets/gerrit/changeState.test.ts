@@ -5,6 +5,7 @@ import {
   dimReason,
   formatVoteGroup,
   getActionInfo,
+  parseSortBy,
   isNewChange,
   parseGerritDate,
   signed,
@@ -101,6 +102,14 @@ describe('getActionInfo', () => {
   });
 });
 
+describe('parseSortBy', () => {
+  it('defaults to last updated', () => {
+    expect(parseSortBy(undefined)).toBe('updated');
+    expect(parseSortBy('bogus')).toBe('updated');
+    expect(parseSortBy('priority')).toBe('priority');
+  });
+});
+
 describe('isNewChange', () => {
   const cutoff = new Date('2026-10-01T08:00:00Z');
 
@@ -128,7 +137,17 @@ describe('buildChangeViews sorting', () => {
       change({ _number: 2, attention_set: { [SELF]: { account: { _account_id: SELF } } }, updated: at(1) }),
       change({ _number: 1, cr: [[2, 2], [3, 2]], updated: at(0) }),
     ];
-    const order = buildChangeViews(changes, SELF, new Date(0)).map((v) => v.change._number);
+    const order = buildChangeViews(changes, SELF, new Date(0), 'priority').map((v) => v.change._number);
     expect(order).toEqual([1, 2, 32, 31, 4, 5, 6]);
+  });
+
+  it('sorts by last update by default', () => {
+    const at = (h: number) => `2026-10-01 ${String(h).padStart(2, '0')}:00:00.000000000`;
+    const changes = [
+      change({ _number: 1, cr: [[2, 2], [3, 2]], updated: at(1) }),
+      change({ _number: 2, subject: 'WIP thing', updated: at(9) }),
+      change({ _number: 3, mergeable: false, updated: at(5) }),
+    ];
+    expect(buildChangeViews(changes, SELF, new Date(0)).map((v) => v.change._number)).toEqual([2, 3, 1]);
   });
 });
