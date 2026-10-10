@@ -1,10 +1,12 @@
-import { useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
 import type { DashboardExport } from '@dashboard/shared';
 import { useDashboardStore, useCurrentDashboardSignals } from '../../store/dashboardStore';
 import { dashboardsApi } from '../../services/api';
 import { DashboardTabs } from '../dashboard/DashboardTabs';
-import { Alert, Button, Icon } from '../ui';
+import { Alert, Button, Icon, Spinner } from '../ui';
+import { ShortcutsModal } from '../settings/ShortcutsModal';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { cx } from '../../lib/cx';
 
 /** Current-dashboard signals: "N need action" and "N new (Xh)", each only when > 0. */
@@ -54,6 +56,11 @@ export function Header() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const openShortcuts = useCallback(() => setShowShortcuts(true), []);
+  useKeyboardShortcuts({ onShowHelp: openShortcuts });
+  // Feedback for refreshes (auto-refresh and the "r" shortcut)
+  const isFetching = useIsFetching() > 0;
 
   const handleExport = async () => {
     if (!currentDashboardId) return;
@@ -109,6 +116,12 @@ export function Header() {
           <DashboardTabs />
         </div>
 
+        {isFetching && (
+          <span role="status" aria-label="Refreshing" title="Refreshing" className="flex shrink-0 text-fg-3">
+            <Spinner size={14} />
+          </span>
+        )}
+
         <CurrentSignals />
 
         {/* Actions */}
@@ -156,9 +169,18 @@ export function Header() {
             </Button>
           )}
 
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="keyboard"
+            aria-label="Keyboard shortcuts (?)"
+            onClick={openShortcuts}
+          />
           <Button variant="ghost" size="sm" icon="settings" aria-label="Settings" onClick={openSettings} />
         </div>
       </div>
+
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
       {error && (
         <div className="absolute right-3 top-full z-50 mt-2 w-96 max-w-[calc(100vw-1.5rem)] rounded-md bg-surface shadow-lg shadow-canvas">

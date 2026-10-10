@@ -32,6 +32,19 @@ class CacheService {
     this.cache.flushAll();
   }
 
+  /**
+   * Drop entries expiring within `maxTtlSeconds` (the regular upstream data), keep the
+   * long-lived ones (e.g. past IRC days, the Gerrit account). Returns the number dropped.
+   */
+  flushShortLived(maxTtlSeconds: number = config.cacheTtl): number {
+    const limit = Date.now() + maxTtlSeconds * 1000;
+    const keys = this.cache.keys().filter((key) => {
+      const expiresAt = this.cache.getTtl(key);
+      return expiresAt !== undefined && expiresAt !== 0 && expiresAt <= limit;
+    });
+    return this.cache.del(keys);
+  }
+
   getOrSet<T>(key: string, fetchFn: () => Promise<T>, ttl?: number): Promise<T> {
     const cached = this.get<T>(key);
     if (cached !== undefined) {

@@ -105,6 +105,8 @@ export const layoutApi = {
 };
 
 export const proxyApi = {
+  /** Drop the backend's short-lived cache so the next fetches get fresh upstream data. */
+  refreshCache: () => request<{ dropped: number }>('/proxy/cache/refresh', { method: 'POST' }),
   getGerritChanges: (params: { dataSourceId?: number; q: string; n?: number }) => {
     const searchParams = new URLSearchParams();
     if (params.dataSourceId) searchParams.append('dataSourceId', params.dataSourceId.toString());

@@ -26,6 +26,13 @@ function getCredential(dataSourceId: number): DbCredential | undefined {
   return db.prepare('SELECT username, password FROM credentials WHERE data_source_id = ?').get(dataSourceId) as DbCredential | undefined;
 }
 
+// Force the next requests to hit the upstream services (manual refresh)
+proxyRouter.post('/cache/refresh', (_req: Request, res: Response) => {
+  const dropped = cacheService.flushShortLived();
+  const response: ApiResponse<{ dropped: number }> = { success: true, data: { dropped } };
+  res.json(response);
+});
+
 proxyRouter.get('/gerrit/changes', async (req: Request, res: Response) => {
   try {
     const dataSourceId = parseInt(req.query.dataSourceId as string) || 1;
